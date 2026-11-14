@@ -1,22 +1,13 @@
 /// Reward stamps shown on the finished screen. The artwork is original SVG in `public/stamps`.
-enum Stamp: CaseIterable {
-  case yokuDekimashita
+enum Stamp: String, CaseIterable {
+  case yokuDekimashita = "yoku-dekimashita"
   case hanamaru
   case neko
   case kuma
   case usagi
   case sakura
 
-  var path: String {
-    switch self {
-    case .yokuDekimashita: "stamps/yoku-dekimashita.svg"
-    case .hanamaru: "stamps/hanamaru.svg"
-    case .neko: "stamps/neko.svg"
-    case .kuma: "stamps/kuma.svg"
-    case .usagi: "stamps/usagi.svg"
-    case .sakura: "stamps/sakura.svg"
-    }
-  }
+  var path: String { "stamps/\(rawValue).svg" }
 
   var label: String {
     switch self {
@@ -29,8 +20,16 @@ enum Stamp: CaseIterable {
     }
   }
 
-  static func random() -> Stamp {
-    let all = Stamp.allCases
-    return all[min(Int(Browser.random() * Double(all.count)), all.count - 1)]
+  static func random(from stamps: [Stamp] = Stamp.allCases) -> Stamp {
+    stamps[min(Int(Browser.random() * Double(stamps.count)), stamps.count - 1)]
   }
+
+  /// A slight tilt to the left or right, 5–13 degrees, like a hand-pressed stamp.
+  static func randomTilt() -> Int {
+    let magnitude = 5 + Int(Browser.random() * 9)
+    return Browser.random() < 0.5 ? -magnitude : magnitude
+  }
+
+  /// Fixed per-slot tilts for the stamp card, so the layout does not jitter between renders.
+  static let slotTilts = [-9, 7, -5, 11, -12, 6]
 }

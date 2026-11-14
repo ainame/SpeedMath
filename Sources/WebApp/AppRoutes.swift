@@ -27,6 +27,11 @@ struct AppRoutes {
     PlayPage(deck: deck, count: count.value, showTimer: timer.value, includeZero: zero.value)
   }
 
+  @Route("/stamps")
+  static func stamps() -> StampsPage {
+    StampsPage()
+  }
+
   @NotFound
   static func notFound(context: RouteNotFoundContext) -> NotFoundPage {
     NotFoundPage()

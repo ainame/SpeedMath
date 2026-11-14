@@ -6,18 +6,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
+    /*
+      App-style layout: the page never scrolls. Every screen fills the viewport and splits it into
+      regions by flex ratios; text scales with the short side of the screen (vmin), and big things
+      (cards, stamps, slots) size themselves from their region via container query units.
+    */
+    html {
+      height: 100%; overflow: hidden; overscroll-behavior: none;
+      font-size: clamp(11px, calc(6px + 1.6vmin), 18px);
+    }
     body {
-      margin: 0;
+      height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none;
+      display: flex; align-items: center; justify-content: center;
       font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
-      background: #fffbea;
-      color: #333;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
+      background: #fffbea; color: #333;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     }
     a { color: inherit; text-decoration: none; }
-    .app { max-width: 760px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
-    .app-header h1 { margin: 0 0 16px; font-size: 1.8rem; text-align: center; }
     button { font: inherit; color: inherit; cursor: pointer; }
+    p, h1, h2 { margin: 0; }
+
+    .app {
+      position: relative; box-sizing: border-box;
+      width: 100%; max-width: 820px; height: 100dvh;
+      padding: calc(4px + 1.5vmin) max(calc(8px + 2vmin), env(safe-area-inset-left)) calc(4px + 1.5vmin) max(calc(8px + 2vmin), env(safe-area-inset-right));
+      display: flex; flex-direction: column; gap: 1.5vmin; overflow: hidden;
+    }
+    /* On desktop browsers keep a phone-like panel instead of stretching to the window. */
+    @media (hover: hover) and (pointer: fine) { .app { max-height: 640px; } }
+    .app-header h1 { font-size: 1.5rem; text-align: center; line-height: 1.3; }
+    .app-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .app-main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    /* The play screen is full-screen: no app title. */
+    .app:has(.play) .app-header { display: none; }
 
     /* Deck colors follow the common 計算カード convention. */
     .deck-red { --deck: #e8504f; --deck-soft: #fde4e3; }
@@ -25,41 +46,47 @@
     .deck-yellow { --deck: #e3a90e; --deck-soft: #fdf2cf; }
     .deck-green { --deck: #2e9e5b; --deck-soft: #dcf3e5; }
 
-    .step { font-size: 1.15rem; margin: 24px 0 8px; }
-    .deck-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    /* ---------- Home: decks 5 : options 3 : start 2 ---------- */
+    .home { gap: 1vmin; }
+    .home-decks { flex: 5; min-height: 0; display: flex; flex-direction: column; }
+    .home-options { flex: 3; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 3vmin; align-content: center; }
+    .home-start { flex: 2; min-height: 0; display: flex; align-items: center; justify-content: center; }
+    .step { font-size: 1rem; line-height: 1.3; margin-bottom: 0.4em; }
+    .deck-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 2vmin; padding-bottom: 4px; }
     .deck {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      padding: 16px 8px; border: 4px solid transparent; border-radius: 16px;
+      min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
+      padding: 0.3em; border: 3px solid transparent; border-radius: 1em;
       background: var(--deck-soft); box-shadow: 0 4px 0 var(--deck);
     }
     .deck.selected { border-color: var(--deck); }
-    .deck-title { font-size: 1.4rem; font-weight: bold; color: var(--deck); }
-    .deck-subtitle { font-weight: bold; }
-    .deck-size { font-size: 0.9rem; opacity: 0.7; }
-
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip {
-      padding: 10px 16px; border: 3px solid #e0c97a; border-radius: 999px;
-      background: #fff; font-weight: bold;
-    }
+    /* Deck text scales with the deck button itself. */
+    .deck-title { font-size: clamp(0.9rem, min(24cqh, 21cqw), 2.4rem); font-weight: bold; color: var(--deck); line-height: 1.1; }
+    .deck-subtitle { font-size: clamp(0.7rem, min(12cqh, 12cqw), 1.3rem); font-weight: bold; }
+    .deck-size { font-size: clamp(0.65rem, min(10cqh, 10cqw), 1.05rem); opacity: 0.7; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5em; }
+    .chip { padding: 0.5em 1.1em; border: 3px solid #e0c97a; border-radius: 999px; background: #fff; font-weight: bold; }
     .chip.selected { background: #ffd84d; border-color: #e0a800; }
 
-    .start { margin-top: 32px; text-align: center; }
-    .start a, .big-button {
-      display: inline-block; padding: 16px 48px; border: none; border-radius: 999px;
+    .home-start a, .big-button {
+      display: inline-block; padding: 0.55em 2.2em; border: none; border-radius: 999px;
       background: #ff8a3d; color: #fff; font-size: 1.5rem; font-weight: bold;
       box-shadow: 0 5px 0 #d9661a;
     }
-    .start a:active, .big-button:active { transform: translateY(3px); box-shadow: 0 2px 0 #d9661a; }
+    .home-start a:active, .big-button:active { transform: translateY(3px); box-shadow: 0 2px 0 #d9661a; }
 
-    .play { text-align: center; }
-    .ready, .finished { padding: 16px 0; }
-    .ready-deck { font-size: 1.4rem; font-weight: bold; }
-    .ready-count { font-size: 1.2rem; }
-    .progress {
-      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-      font-size: 1.2rem; font-weight: bold; margin-bottom: 12px;
+    .stamp-card-link { position: absolute; top: calc(4px + 1.5vmin); right: max(calc(8px + 2vmin), env(safe-area-inset-right)); }
+    .license-link {
+      position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: 4px;
+      font-size: 0.7rem; opacity: 0.45;
     }
+
+    /* ---------- Play ---------- */
+    .play { text-align: center; gap: 1.5vmin; }
+    .ready, .finished { flex: 1; min-height: 0; }
+    .ready { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1em; }
+    .ready-deck { font-size: 1.5rem; font-weight: bold; }
+    .ready-count { font-size: 1.2rem; }
+    .progress { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 1.15rem; font-weight: bold; }
     .progress-side { display: flex; }
     .progress-side a { position: relative; z-index: 2; }
     .progress-timer { justify-content: flex-end; }
@@ -67,111 +94,116 @@
     .clock { display: inline-flex; justify-content: center; font-variant-numeric: tabular-nums; }
     .clock-digit { display: inline-block; width: 0.66em; text-align: center; }
     .clock-separator { display: inline-block; width: 0.36em; text-align: center; }
-    .progress .clock {
-      padding: 4px 14px; border-radius: 999px; background: #fff;
-      box-shadow: inset 0 0 0 3px #e0c97a; font-size: 1.4rem;
-    }
-    .card-area { position: relative; height: clamp(220px, 60vh, 440px); }
+    .progress .clock { padding: 0.15em 0.7em; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 3px #e0c97a; font-size: 1.2rem; }
+
+    .card-area { flex: 1; min-height: 0; position: relative; container-type: size; }
     .card {
-      box-sizing: border-box; height: 100%;
+      position: relative; box-sizing: border-box; height: 100%;
       display: flex; align-items: center; justify-content: center;
-      border-radius: 20px; user-select: none; -webkit-user-select: none;
-      background: #fff; border: 10px solid var(--deck);
-      font-size: clamp(3rem, min(14vw, 24vh), 8rem); font-weight: bold;
-      font-variant-numeric: tabular-nums; white-space: nowrap;
+      border-radius: 1.2rem; border: calc(4px + 1vmin) solid var(--deck); background: #fff;
+      user-select: none; -webkit-user-select: none;
+      font-size: min(45cqh, 14cqw); font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap;
     }
     /* Invisible halves of the whole screen: left = previous, right = next. */
     .tap-zone { position: fixed; top: 0; bottom: 0; width: 50%; z-index: 1; cursor: pointer; }
     .tap-previous { left: 0; }
     .tap-next { right: 0; }
-
     /* Round chevron badges inside the card edges, tinted with the deck color. */
-    .card { position: relative; }
     .card-arrow {
       position: absolute; top: 50%; width: 44px; height: 44px; margin-top: -22px;
       border-radius: 50%; background: var(--deck-soft); opacity: 0.9;
     }
     .card-arrow::before {
       content: ""; position: absolute; top: 50%; left: 50%;
-      width: 12px; height: 12px; border: solid var(--deck); border-width: 0 5px 5px 0;
-      border-radius: 2px;
+      width: 12px; height: 12px; border: solid var(--deck); border-width: 0 5px 5px 0; border-radius: 2px;
     }
     .card-arrow-previous { left: 14px; }
     .card-arrow-next { right: 14px; }
     .card-arrow-previous::before { transform: translate(-30%, -50%) rotate(135deg); }
     .card-arrow-next::before { transform: translate(-70%, -50%) rotate(-45deg); }
-    .hint { font-size: 0.95rem; opacity: 0.7; }
+    .hint { font-size: 0.85rem; opacity: 0.7; }
     .hint-touch { display: none; }
     @media (hover: none) and (pointer: coarse) {
       .hint-keys { display: none; }
       .hint-touch { display: block; }
     }
-    .finished {
-      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 40px;
-    }
+
+    /* Finished: stamp and results side by side, the stamp sized from the region. */
+    .finished { container-type: size; display: flex; align-items: center; justify-content: center; gap: 6cqw; }
     .stamp {
-      width: min(220px, 60vw); transform: rotate(-8deg);
+      height: min(85cqh, 42cqw); aspect-ratio: 1; transform: rotate(var(--tilt, -8deg));
       animation: stamp-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
     }
     @keyframes stamp-in {
-      0% { opacity: 0; transform: scale(2.4) rotate(-24deg); }
-      70% { opacity: 1; transform: scale(0.93) rotate(-6deg); }
-      100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+      0% { opacity: 0; transform: scale(2.4) rotate(calc(var(--tilt, -8deg) * 3)); }
+      70% { opacity: 1; transform: scale(0.93) rotate(calc(var(--tilt, -8deg) * 0.7)); }
+      100% { opacity: 1; transform: scale(1) rotate(var(--tilt, -8deg)); }
     }
     @media (prefers-reduced-motion: reduce) { .stamp { animation: none; } }
-    .finished-title { font-size: 2.2rem; font-weight: bold; margin: 0; }
-    .finished-time { font-size: 2.6rem; font-weight: bold; color: #ff8a3d; margin: 8px 0; }
-    .back { margin-top: 24px; }
-    .license-link {
-      position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: 6px;
-      font-size: 0.75rem; opacity: 0.45;
+    .finished-info { display: flex; flex-direction: column; align-items: center; gap: 0.5em; }
+    .finished-title { font-size: 1.8rem; font-weight: bold; }
+    .finished-time { font-size: 2.4rem; font-weight: bold; color: #ff8a3d; }
+    .finished-stamp { font-weight: bold; color: #d62f3a; }
+
+    /* ---------- Stamp card: slots sized to fit the region ---------- */
+    .stamp-card { text-align: center; gap: 1.5vmin; }
+    .stamp-card-title { font-size: 1.2rem; }
+    .stamp-slots {
+      --cols: 6; --rows: 1; --gap: 2vmin;
+      flex: 1; min-height: 0; container-type: size;
+      display: grid; grid-template-columns: repeat(var(--cols), auto);
+      gap: var(--gap); justify-content: center; align-content: center;
+      border-radius: 1.2rem; background: #fff; box-shadow: inset 0 0 0 3px #e0c97a;
     }
-    .not-found { text-align: center; padding-top: 32px; }
+    /* Container units resolve against .stamp-slots here, so each slot fits the panel. */
+    .stamp-slot {
+      --slot: min(calc((100cqh - var(--gap) * (var(--rows) + 1)) / var(--rows)), calc((100cqw - var(--gap) * (var(--cols) + 1)) / var(--cols)));
+      width: var(--slot); height: var(--slot);
+      box-sizing: border-box; border-radius: 50%; border: 3px dashed #ecd99a;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stamp-slot-number { font-size: 1.3rem; font-weight: bold; color: #e0c97a; }
+    .stamp-slot-image { width: 100%; transform: rotate(var(--tilt, -8deg)) scale(1.08); }
+    .stamp-card-message { font-weight: bold; }
+
+    .not-found { align-items: center; justify-content: center; gap: 1em; }
 
     /* Secondary actions look like app buttons, not web links. */
-    .progress-side a, .back a, .not-found a {
+    .progress-side a, .back a, .not-found a, .stamp-card-link a {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 8px 18px; border-radius: 999px; background: #fff;
+      padding: 0.4em 1.1em; border-radius: 999px; background: #fff;
       box-shadow: 0 3px 0 #e0c97a, inset 0 0 0 2px #e0c97a;
-      font-size: 1rem; font-weight: bold; user-select: none; -webkit-user-select: none;
+      font-size: 0.95rem; font-weight: bold; user-select: none; -webkit-user-select: none;
     }
-    .progress-side a { padding: 4px 14px; font-size: 0.95rem; }
-    .progress-side a:active, .back a:active, .not-found a:active {
+    .progress-side a { padding: 0.25em 0.9em; }
+    .progress-side a:active, .back a:active, .not-found a:active, .stamp-card-link a:active {
       transform: translateY(2px); box-shadow: 0 1px 0 #e0c97a, inset 0 0 0 2px #e0c97a;
     }
 
-    /* The play screen is full-screen: no app title. */
-    .app:has(.play) .app-header { display: none; }
-    @media (min-width: 600px) {
-      .deck-grid { grid-template-columns: repeat(4, 1fr); }
-      .options { display: flex; flex-wrap: wrap; column-gap: 32px; }
-    }
-
-    /* Phones in landscape: fit the whole play screen into the short viewport. */
-    @media (max-height: 500px) {
-      .app { padding: 8px 16px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-      .app-header h1 { font-size: 1.1rem; margin: 0 0 4px; }
-      .step { margin: 10px 0 6px; font-size: 1rem; }
-      .deck { padding: 8px 4px; }
-      .deck-title { font-size: 1.2rem; }
-      .start { margin-top: 14px; }
-      .start a, .big-button { padding: 10px 40px; font-size: 1.3rem; }
-      .ready, .finished { padding: 0; }
-      .ready p, .finished p { margin: 6px 0; }
-      .finished-title { font-size: 1.6rem; }
-      .stamp { width: min(200px, 58vh); }
-      .finished-time { font-size: 2.2rem; }
-      .back { margin-top: 10px; }
-      .progress { margin-bottom: 6px; font-size: 1.05rem; }
-      .progress .clock { font-size: 1.15rem; padding: 2px 12px; }
-      .card-area { height: calc(100dvh - 90px); min-height: 160px; }
-      .card { border-width: 8px; font-size: clamp(3rem, 30vh, 8rem); }
-      .hint { margin: 4px 0 0; font-size: 0.85rem; }
+    /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
+    @media (orientation: portrait) {
+      .home-decks { flex: 4; }
+      .home-options { flex: 4; grid-template-columns: 1fr; row-gap: 1.5vmin; }
+      .deck-grid { grid-template-columns: repeat(2, 1fr); }
+      .finished { flex-direction: column; gap: 2cqh; }
+      .stamp { height: min(45cqh, 70cqw); }
+      .stamp-slots { --cols: 3; --rows: 2; }
     }
   </style>
 </head>
 
 <body>
+  <script>
+    // localStorage can throw (private mode, blocked storage), so the Swift side goes through this.
+    window.speedMathStorage = {
+      load(key) {
+        try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+      },
+      save(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+      },
+    };
+  </script>
   <script type="module">
     import { init } from "virtual:swift-wasm?js&product=WebApp";
     await init()

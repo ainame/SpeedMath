@@ -11,9 +11,11 @@ struct App {
 @View
 struct AppRoot {
   @State var settings = PlaySettings()
+  @State var stampBook = StampBook()
 
   var body: some View {
     AppRoutes.RouterView()
       .environment(settings)
+      .environment(stampBook)
   }
 }
