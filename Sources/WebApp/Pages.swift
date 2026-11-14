@@ -141,8 +141,8 @@ struct PlaySession {
   @State var play = PlayState()
   @State var cards: [Card] = []
   @State var readyEpoch = ""
-  @State var remote: JSObject?
-  @State var remoteModel: JSObject?
+  @State var remote: RemoteLink?
+  @State var remoteModel = RemoteModel()
   @State var stamp: Stamp = .yokuDekimashita
   @State var isNewStamp: Bool = false
   @State var stampTilt: Int = -8
@@ -217,11 +217,11 @@ struct PlaySession {
     }
     .attach(BrowserListener.cardKeys { key in handle(key) })
     .onAppear {
-      readyEpoch = RemoteBrowser.identifier()
-      remote = RemoteBrowser.mount(role: 1, render: { remoteModel = $0 }, presenter: receive)
+      readyEpoch = RemoteLink.identifier()
+      remote = RemoteLink(role: .presenter, render: { remoteModel = $0 }, presenter: receive)
     }
     .onDisappear {
-      if let remote { _ = remote.dispose.function?.callAsFunction(this: remote) }
+      remote?.dispose()
       remote = nil
     }
   }
@@ -247,7 +247,7 @@ struct PlaySession {
   }
 
   private func handle(_ key: CardKey) {
-    if remoteModel?["open"].boolean == true {
+    if remoteModel.open {
       if case .quit = key { showRemote() }
       return
     }
@@ -277,20 +277,20 @@ struct PlaySession {
   }
 
   private func showRemote() {
-    if let remote { _ = remote.show.function?.callAsFunction(this: remote) }
+    remote?.show()
   }
 
   private func start() {
     guard play.phase == .ready else { return }
     var rng = BrowserRandom()
     cards = deck.draw(count: count, includeZero: includeZero, using: &rng)
-    play.start(count: cards.count, epoch: RemoteBrowser.identifier(), now: Browser.now())
+    play.start(count: cards.count, epoch: RemoteLink.identifier(), now: Browser.now())
     publish()
   }
 
   private func replay() {
     guard play.phase == .finished else { return }
-    readyEpoch = RemoteBrowser.identifier()
+    readyEpoch = RemoteLink.identifier()
     play.reset()
     cards = []
     publish()
@@ -306,24 +306,17 @@ struct PlaySession {
     publish()
   }
 
-  private func receive(_ payload: JSObject?) {
-    if let payload, let id = payload["id"].string, let epoch = payload["epoch"].string,
-      let version = payload["baseVersion"].number, let raw = payload["direction"].number,
-      let direction = Direction(rawValue: Int32(raw))
-    {
-      let before = play.phase
-      let result = play.receive(
-        Command(id: id, epoch: epoch, baseVersion: Int(version), direction: direction),
-        role: .remote, now: Browser.now()
-      )
-      afterMove(from: before)
+  /// A Remote command (or nil when the Remote only asks for the current state).
+  private func receive(_ command: Command?) {
+    guard let command else {
       publish()
-      if let remote {
-        _ = remote.receipt.function?.callAsFunction(this: remote, epoch, id, Int(result.rawValue))
-      }
-    } else {
-      publish()
+      return
     }
+    let before = play.phase
+    let result = play.receive(command, role: .remote, now: Browser.now())
+    afterMove(from: before)
+    publish()
+    remote?.receipt(epoch: command.epoch, id: command.id, result: result)
   }
 
   private func afterMove(from before: PlayPhase) {
@@ -336,30 +329,27 @@ struct PlaySession {
   }
 
   private func publish() {
-    guard remoteModel?["paired"].boolean == true, let remote,
-      let snapshot = DailyStorage.makeObject(), let list = DailyStorage.makeArray()
-    else { return }
+    guard remoteModel.paired, let remote else { return }
     let epoch = play.phase == .ready ? readyEpoch : play.epoch
-    snapshot["epoch"] = epoch.jsValue
-    snapshot["deckVersion"] = epoch.jsValue
-    snapshot["version"] = play.version.jsValue
-    snapshot["phase"] = Int(play.phase.rawValue).jsValue
-    snapshot["index"] = play.index.jsValue
     let elapsed = switch play.phase {
     case .ready: 0.0
     case .playing: max(0, Browser.now() - play.startedAt)
     case .finished: play.elapsed
     }
-    snapshot["elapsed"] = Int(min(86_400_000, elapsed)).jsValue
-    for (i, card) in cards.enumerated() {
-      guard let tuple = DailyStorage.makeArray() else { continue }
-      tuple[0] = card.lhs.jsValue
-      tuple[1] = (card.op == .plus ? 1 : -1).jsValue
-      tuple[2] = card.rhs.jsValue
-      list[i] = tuple.jsValue
+    var wireCards: [WireCard] = []
+    if play.phase != .ready {
+      for card in cards {
+        if let wire = WireCard(lhs: card.lhs, sign: card.op == .plus ? 1 : -1, rhs: card.rhs) {
+          wireCards.append(wire)
+        }
+      }
     }
-    snapshot["cards"] = list.jsValue
-    _ = remote.publish.function?.callAsFunction(this: remote, snapshot)
+    guard
+      let snapshot = Snapshot(
+        epoch: epoch, deckVersion: epoch, version: play.version, phase: play.phase, index: play.index,
+        elapsed: Int(min(Double(Wire.maxElapsed), elapsed)), cards: wireCards)
+    else { return }
+    remote.publish(snapshot)
   }
 }
 

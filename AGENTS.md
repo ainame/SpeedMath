@@ -18,6 +18,8 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 - `Pages.swift`: all screens and their small views (home, play session, finished screen, stamp card, records).
 - `Deck.swift`: the four 計算カード decks and their exact card ranges. `Stamp.swift`: reward stamps.
 - `StampBook.swift`, `TodayRecords.swift`, `DailyStorage.swift`: per-day data in localStorage, reset at local midnight.
+- `RemoteLink.swift`: the remote-control client for both roles (WebSocket, reconnect, pairing, ordered sync, command resend). `RemoteWire.swift` validates frames; `RemoteJS.swift` holds timer/listener/promise helpers; `RemoteViews.swift` renders the pairing panel and the Remote screen. Pure wire checks live in `Sources/ProtocolModels`.
+- `web/main.js`: only bridges (`window.speedMathBridge`: non-throwing `JSON.parse`, the QR library, sessionStorage). Do not add app logic in JS.
 - `Browser.swift`: JavaScriptKit helpers (time, random, key/interval listeners) and the clock formatting.
 - `index.html`: the whole stylesheet, plus `window.speedMathStorage` (localStorage wrapper with try/catch).
 - `public/stamps/*.svg`: original stamp artwork (part of this repo, MIT). `public/favicon.svg`: original app icon; regenerate `favicon-32.png` and the square, unrounded `apple-touch-icon.png` (180px) from it with `rsvg-convert`. `public/licenses.html`: generated third-party license page.
