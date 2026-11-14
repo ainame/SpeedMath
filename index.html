@@ -4,7 +4,7 @@
 <head>
   <title>スピード計算</title>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <style>
     /*
       App-style layout: the page never scrolls. Every screen fills the viewport and splits it into
@@ -44,8 +44,10 @@
       display: flex; align-items: center; justify-content: center;
       font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
       background: var(--bg); color: var(--text);
-      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: transparent;
     }
+    /* No zooming anywhere: pan-x/pan-y keep scrolling (records list) but drop pinch and double-tap zoom. */
+    *, *::before, *::after { touch-action: pan-x pan-y; }
     a { color: inherit; text-decoration: none; }
     button { font: inherit; color: inherit; cursor: pointer; }
     p, h1, h2 { margin: 0; }
@@ -264,6 +266,9 @@
     // localStorage can throw (private mode, blocked storage), so the Swift side goes through this.
     // Safety net for the same iOS rotation issue: snap back to the top whenever the viewport changes.
     window.addEventListener("resize", () => window.scrollTo(0, 0));
+    // iOS may still zoom on pinch or double tap despite the viewport and touch-action settings.
+    document.addEventListener("gesturestart", (event) => event.preventDefault());
+    document.addEventListener("dblclick", (event) => event.preventDefault(), { passive: false });
     window.speedMathStorage = {
       load(key) {
         try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
