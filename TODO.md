@@ -8,6 +8,7 @@ Presenter（子どもの画面）が出題・順序・進行・計時・記録�
 
 - Cloudflare アカウントは 1 件、`cf` と Cloudflare MCP はこの端末で認証済み。GitHub CLI も認証済み。Workers のサブドメインは `ainame-apps.workers.dev`。
 - ステージング Worker `speedmath-staging` は作成済みで、未デプロイ・workers.dev 無効。公開後の候補 URL は `https://speedmath-staging.ainame-apps.workers.dev`。これは稼働確認済み URL ではない。
+- 本番 Worker `speedmath` も同じ方法で作成済み（2026-11-14、未デプロイ・workers.dev 無効）。本番用 `CLOUDFLARE_API_TOKEN` は `speedmath` に限定した Workers Editor で作る。
 - GitHub repository secret `CLOUDFLARE_ACCOUNT_ID` は設定済み。`CLOUDFLARE_STAGING_API_TOKEN` も登録済み（`speedmath-staging` に限定した Workers Editor）。Secret の存在のみ確認しており、デプロイによる権限検証は未実施。staging 専用 secret は現在の本番 workflow では使われないため、実装時に staging 用の job / Environment と接続する。本番用 `CLOUDFLARE_API_TOKEN` は別途必要。
 - Workers 画面に requests 0 / 100,000 per day と表示されていたが、請求情報 API は権限不足のためプラン未確認。必要に応じて本人が Dashboard で確認する。
 
