@@ -64,7 +64,10 @@ jobs:
       - name: Test Swift
         run: swift test
       - name: Check generated licenses
-        run: python3 Scripts/generate-licenses.py && git diff --exit-code -- public/licenses.html
+        run: |
+          cp public/licenses.html /tmp/speedmath-licenses.html
+          python3 Scripts/generate-licenses.py
+          diff -u /tmp/speedmath-licenses.html public/licenses.html
       - name: Build and inspect staging bundle
         run: |
           pnpm exec cf build --mode staging
