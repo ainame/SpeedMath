@@ -2,11 +2,18 @@ import { test, expect } from "@playwright/test";
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
 
-
-async function presenter(page, count = 3) {
-  await page.goto("/#/play/add?count=" + count);
-  await page.getByRole("button", { name: "リモコン" }).click();
+// Pairing starts from the child's home screen (the header's リモコン button).
+async function presenter(page) {
+  await page.goto("/#/");
+  await page.locator(".header-remote").getByRole("button", { name: "リモコン" }).click();
   await expect(page.locator(".pair-qr")).toBeVisible();
+}
+
+async function decodeQR(page) {
+  const png = PNG.sync.read(await page.locator(".pair-qr").screenshot());
+  const decoded = jsQR(new Uint8ClampedArray(png.data), png.width, png.height);
+  expect(decoded?.data).toContain("/#/remote?invite=");
+  return decoded.data;
 }
 
 async function codeJoin(page, remote) {
@@ -18,19 +25,24 @@ async function codeJoin(page, remote) {
 
 async function approve(page, remote) {
   await expect(remote.getByText("しょうにんを まっています")).toBeVisible();
-  await expect(remote.locator(".remote-answer")).toHaveCount(0);
-  await expect(remote.getByRole("button", { name: "つぎ" })).toHaveCount(0);
+  await expect(remote.getByRole("button", { name: "スタート！" })).toHaveCount(0);
   await expect(page.locator(".pair-code")).toHaveText(await remote.locator(".pair-code").textContent());
   await page.getByRole("button", { name: "つなぐ", exact: true }).click();
-  await expect(remote.getByText("はじまるのを まっています")).toBeVisible();
-  // The panel closes by itself and the Presenter is back on the はじめる screen.
+  // The panel closes by itself; the child's home shows the indicator and locks the choices.
   await expect(page.locator(".pair-panel")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "はじめる" })).toBeVisible();
-  await expect(page.locator(".remote-paired")).toHaveText("リモコン ✓");
-  await expect(page.getByRole("button", { name: "リモコン" })).toHaveCount(0);
+  await expect(page.locator(".header-remote")).toHaveText("リモコン ✓");
+  await expect(page.getByText("リモコンで えらんでね")).toBeVisible();
+  await expect(page.getByRole("link", { name: "スタート！" })).toHaveCount(0);
+  await expect(remote.getByRole("button", { name: "スタート！" })).toBeEnabled();
 }
 
-test("code, approval, lost ACK, disconnect, and exactly one finish", async ({ page, browser }) => {
+// A three-card game for short tests: the child's own URL, changed in place so the pairing stays.
+async function shortGame(page, remote) {
+  await page.evaluate(() => { location.hash = "#/play/add?count=3"; });
+  await expect(remote.getByRole("button", { name: "はじめる" })).toBeEnabled();
+}
+
+test("the parent chooses, starts, plays and picks what comes next; one record and stamp", async ({ page, browser }) => {
   const remoteContext = await browser.newContext();
   const remote = await remoteContext.newPage();
   let dropped = 0;
@@ -45,29 +57,56 @@ test("code, approval, lost ACK, disconnect, and exactly one finish", async ({ pa
     await presenter(page);
     await codeJoin(page, remote);
     await approve(page, remote);
-    await page.getByRole("button", { name: "はじめる" }).click();
+    expect(dropped).toBe(0);
+
+    // Settings chosen on the Remote show on the child's locked home screen.
+    await remote.locator(".remote-deck", { hasText: "くりさがり なし" }).click();
+    await expect(page.locator(".deck.selected")).toContainText("くりさがり なし");
+    await expect(page.locator(".deck.selected")).toBeDisabled();
+    await remote.getByRole("button", { name: "かくす" }).click();
+    await expect(page.locator(".chip.selected", { hasText: "かくす" })).toBeVisible();
+    expect(dropped).toBe(1); // the first command's ACK was lost and the resend was answered
+
+    // スタート！ moves the child to はじめる; the child has no start button while paired.
+    await remote.getByRole("button", { name: "スタート！" }).click();
+    await expect(page.getByText("ひきざん（くりさがり なし）")).toBeVisible();
+    await expect(page.getByText("リモコンで はじめてね")).toBeVisible();
+    await expect(page.getByRole("button", { name: "はじめる" })).toHaveCount(0);
+    await remote.getByRole("button", { name: "えらびなおす" }).click();
+    await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
+
+    await shortGame(page, remote);
+    await remote.getByRole("button", { name: "はじめる" }).click();
+    await expect(page.locator(".progress-count")).toHaveText("1 / 3");
+    await expect(page.getByRole("link", { name: "✕ やめる" })).toHaveCount(0);
     await expect(remote.locator(".remote-count")).toHaveText("1 / 3");
     await expect(remote.locator(".remote-answer")).toHaveText(/こたえ\s*\d+/);
     await expect(page.getByText("こたえ", { exact: false })).toHaveCount(0);
     await remote.getByRole("button", { name: "つぎ" }).click();
     await expect(page.locator(".progress-count")).toHaveText("2 / 3");
-    await expect(remote.getByRole("button", { name: "つぎ" })).toBeEnabled();
-    expect(dropped).toBe(1);
-    await expect(page.locator(".progress-count")).toHaveText("2 / 3");
+    // The child can still tap through the cards.
+    await page.locator(".tap-previous").click();
+    await expect(remote.locator(".remote-count")).toHaveText("1 / 3");
+
     await remoteContext.setOffline(true);
     await expect(remote.getByRole("button", { name: "つぎ" })).toBeDisabled();
-    await expect(remote.locator(".remote-answer")).toBeVisible();
-    await page.keyboard.press("ArrowLeft");
-    await expect(page.locator(".progress-count")).toHaveText("1 / 3");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator(".progress-count")).toHaveText("2 / 3");
     await remoteContext.setOffline(false);
-    await expect(remote.locator(".remote-count")).toHaveText("1 / 3");
+    await expect(remote.locator(".remote-count")).toHaveText("2 / 3");
     await expect(remote.getByRole("button", { name: "つぎ" })).toBeEnabled();
-    await remote.getByRole("button", { name: "つぎ" }).click();
-    await remote.getByRole("button", { name: "まえ" }).click();
-    await expect(page.locator(".progress-count")).toHaveText("1 / 3");
-    for (let i = 0; i < 3; i++) await remote.getByRole("button", { name: "つぎ" }).click();
+    for (let i = 0; i < 2; i++) await remote.getByRole("button", { name: "つぎ" }).click();
     await expect(page.getByText("おわり！", { exact: true })).toBeVisible();
     await expect(remote.getByText("おわり！", { exact: true })).toBeVisible();
+    await expect(page.getByText("リモコンで つぎを えらんでね")).toBeVisible();
+    await expect(page.getByRole("button", { name: "もういちど" })).toHaveCount(0);
+
+    await remote.getByRole("button", { name: "もういちど" }).click();
+    await expect(page.getByText("リモコンで はじめてね")).toBeVisible();
+    await remote.getByRole("button", { name: "えらびなおす" }).click();
+    await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
+    await expect(page.locator(".header-remote")).toHaveText("リモコン ✓");
+
     await page.goto("/#/records");
     await expect(page.locator(".record-row")).toHaveCount(1);
     await page.goto("/#/stamps");
@@ -75,28 +114,29 @@ test("code, approval, lost ACK, disconnect, and exactly one finish", async ({ pa
   } finally { await remoteContext.close(); }
 });
 
-test("decode the displayed QR, strip invite, reload Presenter, and end by leaving", async ({ page, browser }) => {
+test("decode the displayed QR, strip invite, reload the Presenter mid-game, and unpair", async ({ page, browser }) => {
   const context = await browser.newContext();
   const remote = await context.newPage();
   try {
-    await presenter(page, 2);
-    const png = PNG.sync.read(await page.locator(".pair-qr").screenshot());
-    const decoded = jsQR(new Uint8ClampedArray(png.data), png.width, png.height);
-    expect(decoded?.data).toContain("/#/remote?invite=");
-    await remote.goto(decoded.data);
+    await presenter(page);
+    await remote.goto(await decodeQR(page));
     await approve(page, remote);
     await expect(remote).toHaveURL(/#\/remote$/);
-    await page.keyboard.press("Space");
-    await expect(remote.locator(".remote-count")).toHaveText("1 / 2");
+    await shortGame(page, remote);
+    await remote.getByRole("button", { name: "はじめる" }).click();
     await remote.getByRole("button", { name: "つぎ" }).click();
-    await expect(page.locator(".progress-count")).toHaveText("2 / 2");
+    await expect(page.locator(".progress-count")).toHaveText("2 / 3");
+    // A reload keeps the pairing; the play screen starts over at はじめる.
     await page.reload();
-    await expect(remote.getByText("はじまるのを まっています")).toBeVisible();
-    await page.getByRole("button", { name: "はじめる" }).click();
-    await expect(remote.locator(".remote-count")).toHaveText("1 / 2");
-    await page.getByRole("link", { name: "✕ やめる" }).click();
+    await expect(remote.getByRole("button", { name: "はじめる" })).toBeEnabled();
+    await remote.getByRole("button", { name: "えらびなおす" }).click();
+    await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
+    // The indicator on the home screen offers to end the pairing.
+    await page.locator(".header-remote").getByRole("button", { name: "リモコン ✓" }).click();
+    await page.getByRole("button", { name: "リモコンを はずす" }).click();
     await expect(remote.getByRole("textbox", { name: "コード" })).toBeVisible();
-    await expect(remote.locator(".remote-answer")).toHaveCount(0);
+    await expect(page.locator(".header-remote")).toHaveText("リモコン");
+    await expect(page.getByRole("link", { name: "スタート！" })).toBeVisible();
   } finally { await context.close(); }
 });
 
@@ -104,9 +144,8 @@ test("a QR scanned into an already open Remote tab joins without reloading", asy
   const context = await browser.newContext();
   const remote = await context.newPage();
   try {
-    await presenter(page, 2);
-    const png = PNG.sync.read(await page.locator(".pair-qr").screenshot());
-    const link = new URL(jsQR(new Uint8ClampedArray(png.data), png.width, png.height).data);
+    await presenter(page);
+    const link = new URL(await decodeQR(page));
     // The Remote tab is open on the code form with a half-typed code, as when iOS reuses a tab.
     await remote.goto("/#/remote");
     await remote.getByRole("textbox", { name: "コード" }).fill("ABCD");
@@ -115,15 +154,12 @@ test("a QR scanned into an already open Remote tab joins without reloading", asy
     await approve(page, remote);
     expect(await remote.evaluate(() => window.sameDocument)).toBe(true);
     await expect(remote).toHaveURL(/#\/remote$/);
-    await page.keyboard.press("Space");
-    await expect(remote.locator(".remote-count")).toHaveText("1 / 2");
 
-    // From another screen of the app, the same kind of navigation opens the Remote and joins.
-    // Leaving ends the pairing; a new play screen pairs again from a fresh QR.
-    await page.getByRole("link", { name: "✕ やめる" }).click();
-    await presenter(page, 2);
-    const png2 = PNG.sync.read(await page.locator(".pair-qr").screenshot());
-    const link2 = new URL(jsQR(new Uint8ClampedArray(png2.data), png2.width, png2.height).data);
+    // Unpair, then pair again from another screen of the Remote's app with a fresh code.
+    await page.locator(".header-remote").getByRole("button", { name: "リモコン ✓" }).click();
+    await page.getByRole("button", { name: "リモコンを はずす" }).click();
+    await page.getByRole("button", { name: "コードを だす" }).click();
+    const link2 = new URL(await decodeQR(page));
     await remote.evaluate(() => { location.hash = "#/"; });
     await expect(remote.getByText("1. カードを えらぼう")).toBeVisible();
     await remote.evaluate(hash => { location.hash = hash; }, link2.hash);
@@ -142,6 +178,8 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
       }
     });
     await expect(page.getByRole("button", { name: "はじめる" })).toBeVisible();
+    // Pairing lives on the home screen only.
+    await expect(page.getByRole("button", { name: "リモコン" })).toBeHidden();
     await page.keyboard.press("ArrowRight");
     await expect(page.locator(".progress-count")).toHaveText("1 / 3");
     await expect(page.locator(".progress .clock")).toHaveCount(0);
@@ -149,17 +187,17 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
     await expect(page.locator(".progress-count")).toHaveText("2 / 3");
     await page.locator(".tap-previous").click();
     await expect(page.locator(".progress-count")).toHaveText("1 / 3");
-    await page.getByRole("button", { name: "リモコン" }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
+    await page.locator(".header-remote").getByRole("button", { name: "リモコン" }).click();
     await expect(page.locator(".pair-panel")).toBeVisible();
     const box = await page.locator(".pair-panel").boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(28);
     expect(box.y + box.height).toBeLessThanOrEqual(height - 20);
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
-    await page.keyboard.press("Escape");
-    await page.keyboard.press("Escape");
-    await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
-    // The remote is joined by scanning the QR code; the top page has no remote link.
-    await expect(page.getByRole("link", { name: "リモコン" })).toHaveCount(0);
+    await page.getByRole("button", { name: "とじる" }).click();
+    await expect(page.locator(".pair-panel")).toHaveCount(0);
   });
 }
 

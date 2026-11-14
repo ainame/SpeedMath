@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const message = (type, fields = {}) => ({ v: 1, type, ...fields });
+const message = (type, fields = {}) => ({ v: 2, type, ...fields });
 const P = process.env.SPEEDMATH_TEST_URL || "http://127.0.0.1:4178";
 
 async function post(path, body, origin = P) {
@@ -87,7 +87,7 @@ test("Worker isolates two rooms, rejects invalid roles, and consumes both invita
 
   const state = message("sync", {
     epoch: "1".repeat(32), deckVersion: "2".repeat(32),
-    version: 1, phase: 1, index: 0, elapsed: 123, cards: [[1, 1, 2]],
+    version: 1, screen: 2, index: 0, elapsed: 123, cards: [[1, 1, 2]], deck: 0, zero: 0, count: 45, timer: 1,
   });
   await send(page, pa, state);
   expect(await last(page, approved, "sync")).toEqual(state);

@@ -67,6 +67,11 @@
     }
     /* On desktop browsers keep a phone-like panel instead of stretching to the window. */
     @media (hover: hover) and (pointer: fine) { .app { max-height: 640px; } }
+    /* Header: the remote control button sits left of the title, on the home screen only. */
+    .app-header { display: grid; grid-template-columns: minmax(max-content, 1fr) auto 1fr; align-items: center; gap: 0.5em; }
+    .header-remote { visibility: hidden; }
+    .app:has(.home) .header-remote { visibility: visible; }
+    .header-remote .chip { padding: 0.3em 0.9em; font-size: 0.95rem; }
     .app-header h1 { font-size: 1.5rem; text-align: center; line-height: 1.3; }
     .app-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .app-main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -257,7 +262,10 @@
 
     .progress-timer { gap: 0.35em; align-items: center; }
     .remote-toggle { flex: none; position: relative; z-index: 2; }
-    .remote-paired { display: inline-block; cursor: default; font-size: 0.95rem; }
+    /* While paired the child sees the choices but the parent makes them. */
+    .remote-wait { font-size: 1.1rem; font-weight: bold; color: var(--accent-pressed); }
+    .deck:disabled, .chip:disabled { cursor: default; color: inherit; }
+    .deck:disabled:not(.selected), .chips .chip:disabled:not(.selected) { opacity: 0.7; }
     .pair-panel {
       position: absolute; z-index: 5;
       inset: calc(var(--pad-y) + var(--safe-top)) max(var(--pad-x), var(--safe-right))
@@ -340,12 +348,59 @@
     .remote-next:active:not(:disabled) { background: var(--accent-pressed); transform: scale(0.97); }
     .remote-move:disabled { opacity: 0.4; cursor: default; }
     .remote-footer { display: flex; align-items: center; justify-content: center; gap: 0.6em; min-height: 1.6em; font-size: 0.95rem; }
+
+    /* Remote screens that mirror the child's home, ready and finished screens. */
+    .remote-primary, .remote-secondary, .remote-small {
+      border-radius: 1.2rem; font-weight: bold; user-select: none; -webkit-user-select: none;
+      touch-action: manipulation; transition: background-color 0.1s, transform 0.1s;
+    }
+    .remote-primary { border: 3px solid var(--accent); background: var(--accent); color: #fff; font-size: 1.4rem; }
+    .remote-primary:active:not(:disabled) { background: var(--accent-pressed); transform: scale(0.97); }
+    .remote-secondary { border: 3px solid var(--line-strong); background: var(--surface); color: var(--text); font-size: 1.15rem; }
+    .remote-secondary:active:not(:disabled) { background: var(--surface-pressed); transform: scale(0.97); }
+    .remote-small { padding: 0.25em 0.9em; border: 2.5px solid var(--line); background: var(--surface); font-size: 0.95rem; border-radius: 999px; }
+    .remote-primary:disabled, .remote-secondary:disabled, .remote-small:disabled, .remote-deck:disabled { opacity: 0.45; cursor: default; }
+    .remote-row { display: flex; gap: 2vmin; min-height: 0; }
+    .remote-row > button { flex: 1 1 0; min-height: 3.2em; }
+    .remote-row > .remote-primary { flex-grow: 1.6; }
+    .remote-ready { grid-template-rows: minmax(0, 1fr) auto; }
+    .remote-sub { font-size: min(14cqh, 8cqw); font-weight: bold; color: var(--text-muted); }
+    .remote-ready .remote-message { font-size: min(20cqh, 8cqw); }
+    .remote-ready .remote-final-time { font-size: min(30cqh, 14cqw); }
+    .remote-row > button { white-space: nowrap; padding: 0.3em 0.6em; font-size: clamp(1.1rem, 6.5vmin, 2.2rem); }
+    .remote-start { font-size: clamp(1.3rem, 7vmin, 2.4rem); }
+
+    .remote-home {
+      flex: 1; min-height: 0; display: grid; gap: 2vmin;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-areas: "decks options" "decks start";
+    }
+    .remote-decks { grid-area: decks; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 1.5vmin; }
+    .remote-deck {
+      min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.1em; border: 3px solid var(--line); border-radius: 1rem; background: var(--surface); font-weight: bold;
+    }
+    .remote-deck.selected { border-color: var(--deck); background: var(--deck-soft); box-shadow: 0 0 0 1px var(--deck); }
+    .remote-deck .deck-title { font-size: clamp(0.9rem, min(30cqh, 20cqw), 2rem); color: var(--deck); line-height: 1.1; }
+    .remote-deck .deck-subtitle { font-size: clamp(0.65rem, min(15cqh, 11cqw), 1.05rem); }
+    .remote-options { grid-area: options; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 1vmin; }
+    .remote-option { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; }
+    .remote-option-title { font-size: clamp(0.8rem, 3.6vmin, 1.1rem); font-weight: bold; color: var(--text-muted); min-width: 5.5em; text-align: left; }
+    .remote-option .chip { padding: 0.35em 0.9em; font-size: clamp(0.95rem, 4.4vmin, 1.4rem); }
+    .remote-start { grid-area: start; min-height: 2.6em; }
     @media (orientation: portrait) {
       .remote-stage {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
         grid-template-rows: minmax(0, 1fr) minmax(0, 0.55fr);
       }
       .remote-stage-idle { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+      .remote-ready { grid-template-rows: minmax(0, 1fr) auto; }
+      .remote-stage.remote-ready .remote-row { grid-column: 1 / -1; grid-row: 2; }
+      .remote-row > button { min-height: max(4.5rem, 20vh); }
+      .remote-home {
+        grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto;
+        grid-template-areas: "decks" "options" "start";
+      }
       .remote-stage .remote-card { grid-column: 1 / -1; grid-row: 1; }
       .remote-stage .remote-previous { grid-column: 1; grid-row: 2; }
       .remote-stage .remote-next { grid-column: 2; grid-row: 2; }
@@ -358,7 +413,6 @@
 
     /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
     @media (orientation: portrait) {
-      .app:has(.home) .app-header h1 { text-align: left; }
       .home-options { grid-template-columns: 1fr; row-gap: 1.5vmin; }
       .deck-grid { grid-template-columns: repeat(2, 1fr); }
       .finished { flex-direction: column; gap: 2vmin; }

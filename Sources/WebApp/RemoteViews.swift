@@ -3,28 +3,36 @@ import ElementaryUI
 import JavaScriptKit
 import ProtocolModels
 import RemoteProtocol
+import SessionLogic
 
+/// The child's pairing panel, opened from the home screen's リモコン button: a QR code and a typed
+/// code, then the approval check. It closes by itself once paired; opened again while paired it
+/// offers to end the pairing.
 @View
 struct RemotePanel {
-  let model: RemoteModel
-  let link: RemoteLink?
+  let hub: RemoteHub
 
   var body: some View {
+    let model = hub.model
     if model.open {
       div(.class("pair-panel")) {
         div(.class("pair-heading")) {
           h2 { "リモコン" }
           button(.type(.button), .class("chip")) { "とじる" }
-            .onClick { link?.show() }
+            .onClick { hub.togglePanel() }
         }
-        if let request = model.request, let check = model.check {
+        if model.paired {
+          p { "リモコンと つながっています" }
+          button(.type(.button), .class("chip")) { "リモコンを はずす" }
+            .onClick { hub.revoke() }
+        } else if let request = model.request, let check = model.check {
           p { "リモコンにも おなじ もじが でているかな？" }
           p(.class("pair-code")) { check }
           div(.class("remote-actions")) {
             button(.type(.button), .class("chip")) { "つなぐ" }
-              .onClick { decide(true, request: request) }
+              .onClick { hub.decide(true, request: request) }
             button(.type(.button), .class("chip")) { "つながない" }
-              .onClick { decide(false, request: request) }
+              .onClick { hub.decide(false, request: request) }
           }
         } else if let code = model.code, let qr = model.qr {
           div(.class("pair-invite")) {
@@ -34,29 +42,23 @@ struct RemotePanel {
               p(.class("pair-code")) { code }
               p { "コードは 2ふんで きれるよ。" }
               button(.type(.button), .class("chip")) { "あたらしい コード" }
-                .onClick { link?.newInvite() }
+                .onClick { hub.newInvite() }
             }
           }
         } else {
           p { model.status }
-          if model.paired {
-            // The panel closes itself once paired; nothing to do here.
-          } else if model.retry {
+          if model.retry {
             button(.type(.button), .class("chip")) { "つなぎなおす" }
-              .onClick { link?.retry() }
+              .onClick { hub.retry() }
           } else if !model.joining {
             button(.type(.button), .class("chip")) { "コードを だす" }
               .onClick {
-                if model.started { link?.newInvite() } else { link?.begin() }
+                if model.started { hub.newInvite() } else { hub.begin() }
               }
           }
         }
       }
     }
-  }
-
-  private func decide(_ approved: Bool, request: String) {
-    link?.decide(approved, request: request)
   }
 }
 
@@ -79,48 +81,34 @@ struct RemotePage {
     }
   }
 
-  /// Paired: a full-screen controller. Landscape puts まえ / つぎ under the thumbs on either
-  /// side of the card; portrait stacks the card above two wide buttons.
+  /// Paired: a full-screen controller that follows the child's screen. The parent chooses the
+  /// cards, starts, moves through them, and picks what comes next.
   private var liveView: some View {
     Group {
       div(.class("remote-bar")) {
         div(.class("progress-side")) {
-          if let routes {
-            AppRoutes.Link(to: routes.home()) { "✕ やめる" }
+          if model.screen == .playing {
+            actionButton("✕ やめる", .home, style: "remote-small")
           }
         }
         span(.class("remote-count")) {
-          if phase == 1 {
-            "\(model.index) / \(model.count)"
-          }
+          if model.screen == .playing { "\(model.index) / \(model.count)" }
         }
         div(.class("progress-side progress-timer")) {
-          if phase >= 1 { RemoteClock(model: model) }
+          if model.screen == .playing || model.screen == .finished { RemoteClock(model: model) }
         }
       }
-      div(.class(phase == 1 ? "remote-stage" : "remote-stage remote-stage-idle")) {
-        if phase == 1 { moveButton(direction: -1) }
-        div(.class("remote-card")) {
-          if phase == 1, !model.question.isEmpty {
-            p(.class("remote-problem")) { model.question }
-            p(.class("remote-answer")) {
-              span(.class("remote-answer-label")) { "こたえ" }
-              span(.class("remote-answer-value")) { model.answer }
-            }
-          } else if phase == 2 {
-            p(.class("remote-message")) { "おわり！" }
-            p(.class("remote-final-time")) { ClockDisplay(milliseconds: model.elapsed) }
-          } else {
-            p(.class("remote-message")) { "はじまるのを まっています" }
-          }
-        }
-        if phase == 1 { moveButton(direction: 1) }
+      switch model.screen {
+      case .home: homeControls
+      case .ready: readyControls
+      case .playing: playingControls
+      case .finished: finishedControls
       }
       div(.class("remote-footer")) {
         if !model.notice.isEmpty {
           p(.class("remote-notice")) { model.notice }
         } else if !model.online {
-          // While online the card itself shows the state; the footer only reports trouble.
+          // While online the screen itself shows the state; the footer only reports trouble.
           p(.class("remote-status remote-offline")) { model.status }
         }
         if model.retry {
@@ -129,6 +117,114 @@ struct RemotePage {
         }
       }
     }
+  }
+
+  /// The child's home screen: choose the deck and options, then スタート！
+  private var homeControls: some View {
+    div(.class("remote-home")) {
+      div(.class("remote-decks")) {
+        for deck in Deck.allCases {
+          RemoteDeckButton(
+            deck: deck, isSelected: selectedDeck == deck, isEnabled: canSend
+          ) { link?.command(.deck, value: Deck.allCases.firstIndex(of: deck) ?? 0) }
+        }
+      }
+      div(.class("remote-options")) {
+        optionChips(
+          "0の けいさん", [("いれない", 0), ("いれる", 1)], selected: model.settings.includeZero ? 1 : 0, action: .zero)
+        optionChips("なんまい", countChoices, selected: selectedCount, action: .count)
+        optionChips(
+          "タイマー", [("みせる", 1), ("かくす", 0)], selected: model.settings.showTimer ? 1 : 0, action: .timer)
+      }
+      actionButton("スタート！", .start, style: "remote-primary remote-start")
+    }
+  }
+
+  private var readyControls: some View {
+    div(.class("remote-stage remote-stage-idle remote-ready")) {
+      div(.class("remote-card")) {
+        p(.class("remote-message")) { "\(selectedDeck.title)（\(selectedDeck.subtitle)）" }
+        p(.class("remote-sub")) { "\(drawCount)まい" }
+      }
+      div(.class("remote-row")) {
+        actionButton("えらびなおす", .home, style: "remote-secondary")
+        actionButton("はじめる", .begin, style: "remote-primary")
+      }
+    }
+  }
+
+  private var playingControls: some View {
+    div(.class("remote-stage")) {
+      actionButton("まえ", .previous, style: "remote-move remote-previous", arrow: "←", enabled: model.index > 1)
+      div(.class("remote-card")) {
+        if !model.question.isEmpty {
+          p(.class("remote-problem")) { model.question }
+          p(.class("remote-answer")) {
+            span(.class("remote-answer-label")) { "こたえ" }
+            span(.class("remote-answer-value")) { model.answer }
+          }
+        }
+      }
+      actionButton("つぎ", .next, style: "remote-move remote-next", arrow: "→")
+    }
+  }
+
+  private var finishedControls: some View {
+    div(.class("remote-stage remote-stage-idle remote-ready")) {
+      div(.class("remote-card")) {
+        p(.class("remote-message")) { "おわり！" }
+        p(.class("remote-final-time")) { ClockDisplay(milliseconds: model.elapsed) }
+      }
+      div(.class("remote-row")) {
+        actionButton("えらびなおす", .home, style: "remote-secondary")
+        actionButton("もういちど", .replay, style: "remote-primary")
+      }
+    }
+  }
+
+  private var canSend: Bool { model.online && !model.busy }
+
+  private var selectedDeck: Deck {
+    Deck.allCases.indices.contains(model.settings.deck) ? Deck.allCases[model.settings.deck] : .additionNoCarry
+  }
+
+  private var deckSize: Int { selectedDeck.cards(includeZero: model.settings.includeZero).count }
+
+  /// 45 is offered only for decks larger than that, as on the child's screen.
+  private var countChoices: [(String, Int)] { deckSize > 45 ? [("45まい", 45), ("ぜんぶ", 0)] : [("ぜんぶ", 0)] }
+
+  private var selectedCount: Int { model.settings.count == 45 && deckSize > 45 ? 45 : 0 }
+
+  private var drawCount: Int { model.settings.count == 45 && deckSize > 45 ? 45 : deckSize }
+
+  private func optionChips(_ title: String, _ choices: [(String, Int)], selected: Int, action: RemoteAction)
+    -> some View
+  {
+    div(.class("remote-option")) {
+      span(.class("remote-option-title")) { title }
+      div(.class("chips")) {
+        for choice in choices {
+          Chip(label: choice.0, isSelected: selected == choice.1, isLocked: !canSend) {
+            link?.command(action, value: choice.1)
+          }
+        }
+      }
+    }
+  }
+
+  private func actionButton(
+    _ title: String, _ action: RemoteAction, style: String, arrow: String? = nil, enabled: Bool = true
+  ) -> some View {
+    button(.type(.button), .class(style)) {
+      if let arrow {
+        span(.class("remote-move-arrow"), .custom(name: "aria-hidden", value: "true")) { arrow }
+        span(.class("remote-move-label")) { title }
+      } else {
+        span { title }
+      }
+    }
+    .attributes(.disabled, when: !canSend || !enabled)
+    .onClick { link?.command(action) }
   }
 
   private var pairingView: some View {
@@ -169,31 +265,32 @@ struct RemotePage {
       }
     }
   }
+}
 
-  private var phase: Int { Int(model.phase.rawValue) }
+/// A deck choice on the Remote's home controls.
+@View
+struct RemoteDeckButton {
+  let deck: Deck
+  let isSelected: Bool
+  let isEnabled: Bool
+  let onSelect: () -> Void
 
-  private func moveButton(direction: Int) -> some View {
-    let enabled = model.online && !model.busy && (direction > 0 || model.index > 1)
-    let next = direction > 0
-    return button(.type(.button), .class(next ? "remote-move remote-next" : "remote-move remote-previous")) {
-      span(.class("remote-move-arrow"), .custom(name: "aria-hidden", value: "true")) { next ? "→" : "←" }
-      span(.class("remote-move-label")) { next ? "つぎ" : "まえ" }
+  var body: some View {
+    button(.type(.button), .class("remote-deck \(deck.colorClass)\(isSelected ? " selected" : "")")) {
+      span(.class("deck-title")) { deck.title }
+      span(.class("deck-subtitle")) { deck.subtitle }
     }
-    .attributes(.disabled, when: !enabled)
-    .onClick {
-      link?.move(next ? .next : .previous)
-    }
+    .attributes(.disabled, when: !isEnabled)
+    .onClick { if isEnabled { onSelect() } }
   }
 }
 
-/// The Presenter only sends its elapsed time with each state change, so the Remote keeps a local
-/// clock from the moment that snapshot arrived and freezes it while the Presenter is unreachable.
 @View
 struct RemoteClock {
   let model: RemoteModel
 
   var body: some View {
-    if model.phase == .playing, model.online {
+    if model.screen == .playing, model.online {
       LiveTimer(startedAt: model.startedAt)
     } else {
       ClockDisplay(milliseconds: model.elapsed)

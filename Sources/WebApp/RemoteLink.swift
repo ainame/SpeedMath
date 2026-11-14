@@ -15,7 +15,9 @@ struct RemoteModel {
   var check: String?
   var code: String?
   var qr: String?
-  var phase: PlayPhase = .ready
+  /// The Presenter's screen and home-screen settings, mirrored on the Remote.
+  var screen: Screen = .home
+  var settings = WireSettings(deck: 0, includeZero: false, count: 45, showTimer: true)
   var index = 0
   var count = 0
   var elapsed: Double = 0
@@ -97,7 +99,7 @@ final class RemoteLink {
     listeners.append(JSListener(JS.global, "online") { [self] _ in visible() })
     listeners.append(JSListener(JS.global, "offline") { [self] _ in offline() })
 
-    if role == .presenter, let reload = RemoteLink.reloadSession, reload.route == JS.hash {
+    if role == .presenter, let reload = RemoteLink.reloadSession {
       RemoteLink.reloadSession = nil
       session = RemoteSession(id: reload.id, key: reload.key)
       storePresenter(session)
@@ -348,6 +350,9 @@ final class RemoteLink {
     }
   }
 
+  /// Presenter: end the pairing with the current Remote. The session stays for a new invite.
+  func revoke() { send("revoke") }
+
   func decide(_ approved: Bool, request: String) {
     if request == model.request {
       send(approved ? "approve" : "reject") { $0["request"] = request.jsValue }
@@ -581,7 +586,7 @@ final class RemoteLink {
         $0.online = false
         $0.paired = false
         $0.busy = false
-        $0.phase = .ready
+        $0.screen = .home
         $0.question = ""
         $0.answer = ""
         $0.request = nil
@@ -663,24 +668,22 @@ final class RemoteLink {
   }
 
   private func sync(_ state: Snapshot) {
-    if let previous = snapshot, previous.epoch == state.epoch,
-      state.version < previous.version || state.deckVersion != previous.deckVersion
-    {
-      return
-    }
+    // Within one Presenter document (epoch) the version orders snapshots; decks change within it.
+    if let previous = snapshot, previous.epoch == state.epoch, state.version < previous.version { return }
     if oldEpochs.contains(state.epoch) { return }
     if let previous = snapshot, previous.epoch != state.epoch {
       oldEpochs.append(previous.epoch)
       if oldEpochs.count > 32 { oldEpochs.removeFirst() }
     }
     snapshot = state
-    let card = state.phase == .playing ? state.cards[state.index] : nil
+    let card = state.screen == .playing ? state.cards[state.index] : nil
     if let command = inFlightCommand, command.epoch != state.epoch { uncertain() }
     let now = Browser.now()
     update {
       $0.online = true
-      $0.status = state.phase == .ready ? "はじまるのを まっています" : syncedText
-      $0.phase = state.phase
+      $0.status = syncedText
+      $0.screen = state.screen
+      $0.settings = state.settings
       $0.index = state.index + 1
       $0.count = state.cards.count
       $0.elapsed = Double(state.elapsed)
@@ -699,10 +702,12 @@ final class RemoteLink {
 
   // MARK: - Remote → Presenter commands
 
-  func move(_ direction: Direction) {
-    guard inFlightCommand == nil, model.online, let snapshot, snapshot.phase == .playing else { return }
+  /// Asks the Presenter to do something; one command is in flight at a time.
+  func command(_ action: RemoteAction, value: Int = 0) {
+    guard inFlightCommand == nil, model.online, let snapshot else { return }
     inFlightCommand = Command(
-      id: RemoteLink.identifier(), epoch: snapshot.epoch, baseVersion: snapshot.version, direction: direction)
+      id: RemoteLink.identifier(), epoch: snapshot.epoch, baseVersion: snapshot.version, action: action,
+      value: value)
     retries = 0
     commandStarted = Browser.now()
     update {
@@ -719,12 +724,7 @@ final class RemoteLink {
     let attempt = retries
     retries += 1
     if attempt >= 4 || Browser.now() - commandStarted >= 20_000 { return uncertain() }
-    let sent = send("command") {
-      $0["epoch"] = command.epoch.jsValue
-      $0["id"] = command.id.jsValue
-      $0["baseVersion"] = command.baseVersion.jsValue
-      $0["direction"] = Int(command.direction.rawValue).jsValue
-    }
+    let sent = send("command") { RemoteWire.fillCommand($0, command) }
     if sent { commandTimer.start(900) }
   }
 

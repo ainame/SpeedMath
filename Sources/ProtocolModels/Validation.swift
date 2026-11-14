@@ -2,7 +2,7 @@
 // Byte-level string handling keeps this Embedded Swift friendly: no Foundation, no Character parsing.
 
 public enum Wire {
-  public static let version = 1
+  public static let version = 2
   public static let frameLimit = 8192
   public static let controlLimit = 512
   public static let maxCards = WireRules.maxCards
@@ -87,30 +87,51 @@ public struct WireCard: Equatable {
   public var answer: Int { lhs + sign * rhs }
 }
 
+/// The settings chosen on the home screen, as sent on the wire.
+public struct WireSettings: Equatable {
+  /// Index in `Deck.allCases`.
+  public var deck: Int
+  public var includeZero: Bool
+  /// 0 plays the whole deck.
+  public var count: Int
+  public var showTimer: Bool
+
+  public init(deck: Int, includeZero: Bool, count: Int, showTimer: Bool) {
+    self.deck = deck
+    self.includeZero = includeZero
+    self.count = count
+    self.showTimer = showTimer
+  }
+}
+
 /// The Presenter's state as relayed to the Remote.
 public struct Snapshot: Equatable {
   public let epoch: String
   public let deckVersion: String
   public let version: Int
-  public let phase: PlayPhase
+  public let screen: Screen
   public let index: Int
   public let elapsed: Int
   public let cards: [WireCard]
+  public let settings: WireSettings
 
   public init?(
-    epoch: String, deckVersion: String, version: Int, phase: PlayPhase, index: Int, elapsed: Int,
-    cards: [WireCard]
+    epoch: String, deckVersion: String, version: Int, screen: Screen, index: Int, elapsed: Int,
+    cards: [WireCard], settings: WireSettings
   ) {
     guard Wire.isID(epoch), Wire.isID(deckVersion),
       WireRules.validSnapshot(
-        version: version, phase: Int(phase.rawValue), index: index, count: cards.count, elapsed: elapsed)
+        version: version, screen: Int(screen.rawValue), index: index, cards: cards.count, elapsed: elapsed,
+        deck: settings.deck, zero: settings.includeZero ? 1 : 0, count: settings.count,
+        timer: settings.showTimer ? 1 : 0)
     else { return nil }
     self.epoch = epoch
     self.deckVersion = deckVersion
     self.version = version
-    self.phase = phase
+    self.screen = screen
     self.index = index
     self.elapsed = elapsed
     self.cards = cards
+    self.settings = settings
   }
 }

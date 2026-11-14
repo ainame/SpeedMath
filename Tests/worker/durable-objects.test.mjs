@@ -177,7 +177,7 @@ test("session expiry closes sockets, deletes storage, and tolerates repeated ala
 
 test("ending a session from the Presenter leaves the object usable for late calls", async () => {
   const { object, presenter } = await session();
-  await object.webSocketMessage(presenter, JSON.stringify({ v: 1, type: "end" }));
+  await object.webSocketMessage(presenter, JSON.stringify({ v: 2, type: "end" }));
   assert.deepEqual(presenter.closed, { code: 4001, reason: "ended" });
   assert.equal(object.load(), null);
   await object.alarm();

@@ -27,16 +27,18 @@ public enum RemoteWire {
   }
 
   public static func snapshot(_ x: JSObject) -> Snapshot? {
-    guard JS.keyCount(x) == 9, let epoch = id(x.epoch), let deckVersion = id(x.deckVersion),
-      let version = Wire.uint(x.version.number), let rawPhase = Wire.uint(x.phase.number, max: 2),
-      let phase = PlayPhase(rawValue: Int32(rawPhase)), let index = Wire.uint(x.index.number, max: 53),
+    guard JS.keyCount(x) == 13, let epoch = id(x.epoch), let deckVersion = id(x.deckVersion),
+      let version = Wire.uint(x.version.number), let rawScreen = Wire.uint(x.screen.number, max: 3),
+      let screen = Screen(rawValue: Int32(rawScreen)), let index = Wire.uint(x.index.number, max: 53),
       let elapsed = Wire.uint(x.elapsed.number, max: Wire.maxElapsed),
+      let deck = Wire.uint(x.deck.number, max: 3), let zero = Wire.uint(x.zero.number, max: 1),
+      let count = Wire.uint(x.count.number, max: 45), let timer = Wire.uint(x.timer.number, max: 1),
       let list = x.cards.object, JS.isArray(list)
     else { return nil }
-    let count = Int(list.length.number ?? -1)
-    guard count >= 0, count <= Wire.maxCards else { return nil }
+    let total = Int(list.length.number ?? -1)
+    guard total >= 0, total <= Wire.maxCards else { return nil }
     var cards: [WireCard] = []
-    for i in 0..<count {
+    for i in 0..<total {
       guard let tuple = list[i].object, JS.isArray(tuple), tuple.length.number == 3,
         let lhs = Wire.uint(tuple[0].number, max: 18), let rhs = Wire.uint(tuple[2].number, max: 9),
         let sign = tuple[1].number, sign == 1 || sign == -1,
@@ -45,8 +47,9 @@ public enum RemoteWire {
       cards.append(card)
     }
     return Snapshot(
-      epoch: epoch, deckVersion: deckVersion, version: version, phase: phase, index: index,
-      elapsed: elapsed, cards: cards)
+      epoch: epoch, deckVersion: deckVersion, version: version, screen: screen, index: index,
+      elapsed: elapsed, cards: cards,
+      settings: WireSettings(deck: deck, includeZero: zero == 1, count: count, showTimer: timer == 1))
   }
 
   public struct Ack {
@@ -63,11 +66,21 @@ public enum RemoteWire {
   }
 
   public static func command(_ x: JSObject) -> Command? {
-    guard JS.keyCount(x) == 6, let epoch = id(x.epoch), let commandID = id(x.id),
-      let baseVersion = Wire.uint(x.baseVersion.number), let raw = x.direction.number,
-      raw == 1 || raw == -1, let direction = Direction(rawValue: Int32(raw))
+    guard JS.keyCount(x) == 7, let epoch = id(x.epoch), let commandID = id(x.id),
+      let baseVersion = Wire.uint(x.baseVersion.number), let rawAction = Wire.uint(x.action.number, max: 10),
+      let value = Wire.uint(x.value.number, max: 45),
+      WireRules.validCommand(action: rawAction, value: value),
+      let action = RemoteAction(rawValue: Int32(rawAction))
     else { return nil }
-    return Command(id: commandID, epoch: epoch, baseVersion: baseVersion, direction: direction)
+    return Command(id: commandID, epoch: epoch, baseVersion: baseVersion, action: action, value: value)
+  }
+
+  public static func fillCommand(_ object: JSObject, _ command: Command) {
+    object["epoch"] = command.epoch.jsValue
+    object["id"] = command.id.jsValue
+    object["baseVersion"] = command.baseVersion.jsValue
+    object["action"] = Int(command.action.rawValue).jsValue
+    object["value"] = command.value.jsValue
   }
 
   public static func isRequestSync(_ x: JSObject) -> Bool { JS.keyCount(x) == 2 }
@@ -76,9 +89,13 @@ public enum RemoteWire {
     object["epoch"] = snapshot.epoch.jsValue
     object["deckVersion"] = snapshot.deckVersion.jsValue
     object["version"] = snapshot.version.jsValue
-    object["phase"] = Int(snapshot.phase.rawValue).jsValue
+    object["screen"] = Int(snapshot.screen.rawValue).jsValue
     object["index"] = snapshot.index.jsValue
     object["elapsed"] = snapshot.elapsed.jsValue
+    object["deck"] = snapshot.settings.deck.jsValue
+    object["zero"] = (snapshot.settings.includeZero ? 1 : 0).jsValue
+    object["count"] = snapshot.settings.count.jsValue
+    object["timer"] = (snapshot.settings.showTimer ? 1 : 0).jsValue
     guard let list = JS.new("Array") else { return }
     for (i, card) in snapshot.cards.enumerated() {
       guard let tuple = JS.new("Array") else { continue }

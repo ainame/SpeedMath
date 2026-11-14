@@ -8,14 +8,8 @@ public struct PlayState {
   public private(set) var version = 0
   public private(set) var startedAt: Double = 0
   public private(set) var elapsed: Double = 0
+  /// Identifies this shuffle; the Remote uses it to tell decks apart.
   public private(set) var epoch = ""
-  private var history: [Receipt] = []
-
-  private struct Receipt {
-    let command: Command
-    let result: CommandResult
-    let at: Double
-  }
 
   public init() {}
 
@@ -27,7 +21,6 @@ public struct PlayState {
     elapsed = 0
     index = 0
     version = 1
-    history.removeAll()
     phase = .playing
   }
 
@@ -47,19 +40,5 @@ public struct PlayState {
     }
     version += 1
     return .applied
-  }
-
-  public mutating func receive(_ command: Command, role: Role, now: Double) -> CommandResult {
-    guard role == .remote, command.epoch == epoch else { return .resync }
-    history.removeAll { now - $0.at > 30_000 }
-    if let previous = history.first(where: { $0.command.id == command.id }) {
-      return previous.command == command ? previous.result : .conflict
-    }
-    guard command.baseVersion == version, phase == .playing, history.count < 512 else { return .resync }
-    let result = move(command.direction, now: now)
-    // Consume the base version even at a boundary so an evicted no-op cannot be replayed.
-    if result == .unchanged { version += 1 }
-    history.append(Receipt(command: command, result: result, at: now))
-    return result
   }
 }

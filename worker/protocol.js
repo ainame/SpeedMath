@@ -4,7 +4,7 @@ import logicModule from "./generated/logic.wasm";
 // built into a tiny import-free Wasm module by Scripts/build-worker-wasm.sh.
 export const logic = new WebAssembly.Instance(logicModule).exports;
 
-export const VERSION = 1;
+export const VERSION = 2;
 export const FRAME_LIMIT = 8192;
 export const CONTROL_LIMIT = 512;
 export const tokenPattern = /^[0-9a-f]{64}$/;
@@ -39,16 +39,20 @@ const card = c => Array.isArray(c) && c.length === 3 && uint(c[0], 18) && (c[1] 
 export function relayKind(x) {
   switch (x.type) {
     case "sync":
-      return exact(x, ["v", "type", "epoch", "deckVersion", "version", "phase", "index", "elapsed", "cards"]) &&
-        id(x.epoch) && id(x.deckVersion) && uint(x.version) && uint(x.phase, 2) && uint(x.index, 53) &&
-        uint(x.elapsed, 86_400_000) && Array.isArray(x.cards) && x.cards.length <= 54 && x.cards.every(card) &&
-        logic.valid_snapshot(x.version, x.phase, x.index, x.cards.length, x.elapsed) === 1 ? 1 : 0;
+      return exact(x, ["v", "type", "epoch", "deckVersion", "version", "screen", "index", "elapsed", "cards",
+        "deck", "zero", "count", "timer"]) &&
+        id(x.epoch) && id(x.deckVersion) && uint(x.version) && uint(x.screen, 3) && uint(x.index, 53) &&
+        uint(x.elapsed, 86_400_000) && uint(x.deck, 3) && uint(x.zero, 1) && uint(x.count, 45) && uint(x.timer, 1) &&
+        Array.isArray(x.cards) && x.cards.length <= 54 && x.cards.every(card) &&
+        logic.valid_snapshot(x.version, x.screen, x.index, x.cards.length, x.elapsed,
+          x.deck, x.zero, x.count, x.timer) === 1 ? 1 : 0;
     case "ack":
       return exact(x, ["v", "type", "epoch", "id", "result"]) &&
         id(x.epoch) && id(x.id) && uint(x.result, 4) && x.result > 0 ? 2 : 0;
     case "command":
-      return exact(x, ["v", "type", "epoch", "id", "baseVersion", "direction"]) &&
-        id(x.epoch) && id(x.id) && uint(x.baseVersion) && (x.direction === 1 || x.direction === -1) ? 3 : 0;
+      return exact(x, ["v", "type", "epoch", "id", "baseVersion", "action", "value"]) &&
+        id(x.epoch) && id(x.id) && uint(x.baseVersion) && uint(x.action, 10) && uint(x.value, 45) &&
+        logic.valid_command(x.action, x.value) === 1 ? 3 : 0;
     case "requestSync":
       return exact(x, ["v", "type"]) ? 4 : 0;
     default: return 0;
