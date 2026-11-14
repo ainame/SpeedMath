@@ -4,16 +4,18 @@
 <head>
   <title>スピード計算</title>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     body {
       margin: 0;
       font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
       background: #fffbea;
       color: #333;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     a { color: inherit; text-decoration: none; }
-    .app { max-width: 640px; margin: 0 auto; padding: 16px; }
+    .app { max-width: 760px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
     .app-header h1 { margin: 0 0 16px; font-size: 1.8rem; text-align: center; }
     button { font: inherit; color: inherit; cursor: pointer; }
 
@@ -51,13 +53,16 @@
     .start a:active, .big-button:active { transform: translateY(3px); box-shadow: 0 2px 0 #d9661a; }
 
     .play { text-align: center; }
-    .ready, .finished { padding: 24px 0; }
+    .ready, .finished { padding: 16px 0; }
     .ready-deck { font-size: 1.4rem; font-weight: bold; }
     .ready-count { font-size: 1.2rem; }
     .progress {
-      display: flex; justify-content: space-between; align-items: center;
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
       font-size: 1.2rem; font-weight: bold; margin-bottom: 12px;
     }
+    .progress-side { display: flex; }
+    .progress-side a { position: relative; z-index: 2; }
+    .progress-timer { justify-content: flex-end; }
     /* Each clock glyph has a fixed cell width so mm:ss.s never shifts as digits change. */
     .clock { display: inline-flex; justify-content: center; font-variant-numeric: tabular-nums; }
     .clock-digit { display: inline-block; width: 0.66em; text-align: center; }
@@ -66,17 +71,75 @@
       padding: 4px 14px; border-radius: 999px; background: #fff;
       box-shadow: inset 0 0 0 3px #e0c97a; font-size: 1.4rem;
     }
+    .card-area { position: relative; height: clamp(220px, 60vh, 440px); }
     .card {
+      box-sizing: border-box; height: 100%;
       display: flex; align-items: center; justify-content: center;
-      aspect-ratio: 5 / 3; border-radius: 20px; user-select: none; cursor: pointer;
+      border-radius: 20px; user-select: none; -webkit-user-select: none;
       background: #fff; border: 10px solid var(--deck);
-      font-size: clamp(3rem, 16vw, 6rem); font-weight: bold; font-variant-numeric: tabular-nums;
+      font-size: clamp(3rem, min(14vw, 24vh), 8rem); font-weight: bold;
+      font-variant-numeric: tabular-nums; white-space: nowrap;
     }
+    /* Invisible halves of the whole screen: left = previous, right = next. */
+    .tap-zone {
+      position: fixed; top: 0; bottom: 0; width: 50%; z-index: 1;
+      display: flex; align-items: center; cursor: pointer;
+    }
+    .tap-previous { left: 0; justify-content: flex-start; }
+    .tap-next { right: 0; justify-content: flex-end; }
+    .tap-zone.disabled { cursor: default; }
+    .tap-zone.disabled .tap-arrow { visibility: hidden; }
+    .tap-arrow { padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right)); font-size: 3rem; font-weight: bold; opacity: 0.25; }
     .hint { font-size: 0.95rem; opacity: 0.7; }
+    .hint-touch { display: none; }
+    @media (hover: none) and (pointer: coarse) {
+      .hint-keys { display: none; }
+      .hint-touch { display: block; }
+    }
     .finished-title { font-size: 2.2rem; font-weight: bold; margin: 0; }
     .finished-time { font-size: 2.6rem; font-weight: bold; color: #ff8a3d; margin: 8px 0; }
     .back { margin-top: 24px; }
-    .back a { text-decoration: underline; opacity: 0.8; }
+    .not-found { text-align: center; padding-top: 32px; }
+
+    /* Secondary actions look like app buttons, not web links. */
+    .progress-side a, .back a, .not-found a {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 8px 18px; border-radius: 999px; background: #fff;
+      box-shadow: 0 3px 0 #e0c97a, inset 0 0 0 2px #e0c97a;
+      font-size: 1rem; font-weight: bold; user-select: none; -webkit-user-select: none;
+    }
+    .progress-side a { padding: 4px 14px; font-size: 0.95rem; }
+    .progress-side a:active, .back a:active, .not-found a:active {
+      transform: translateY(2px); box-shadow: 0 1px 0 #e0c97a, inset 0 0 0 2px #e0c97a;
+    }
+
+    /* The play screen is full-screen: no app title. */
+    .app:has(.play) .app-header { display: none; }
+    @media (min-width: 600px) {
+      .deck-grid { grid-template-columns: repeat(4, 1fr); }
+      .options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    }
+
+    /* Phones in landscape: fit the whole play screen into the short viewport. */
+    @media (max-height: 500px) {
+      .app { padding: 8px 16px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+      .app-header h1 { font-size: 1.1rem; margin: 0 0 4px; }
+      .step { margin: 10px 0 6px; font-size: 1rem; }
+      .deck { padding: 8px 4px; }
+      .deck-title { font-size: 1.2rem; }
+      .start { margin-top: 14px; }
+      .start a, .big-button { padding: 10px 40px; font-size: 1.3rem; }
+      .ready, .finished { padding: 0; }
+      .ready p, .finished p { margin: 6px 0; }
+      .finished-title { font-size: 1.6rem; }
+      .finished-time { font-size: 2.2rem; }
+      .back { margin-top: 10px; }
+      .progress { margin-bottom: 6px; font-size: 1.05rem; }
+      .progress .clock { font-size: 1.15rem; padding: 2px 12px; }
+      .card-area { height: calc(100dvh - 90px); min-height: 160px; }
+      .card { border-width: 8px; font-size: clamp(3rem, 30vh, 8rem); }
+      .hint { margin: 4px 0 0; font-size: 0.85rem; }
+    }
   </style>
 </head>
 

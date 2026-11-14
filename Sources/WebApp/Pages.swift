@@ -15,22 +15,27 @@ struct HomePage {
         }
       }
 
-      h2(.class("step")) { "2. なんまい やる？" }
-      div(.class("chips")) {
-        // 45 is offered only for decks larger than that; on the 36-card decks it equals "all".
-        if settings.deck.cards.count > 45 {
-          Chip(label: "45まい", isSelected: settings.count == 45) { settings.count = 45 }
+      div(.class("options")) {
+        div {
+          h2(.class("step")) { "2. なんまい やる？" }
+          div(.class("chips")) {
+            // 45 is offered only for decks larger than that; on the 36-card decks it equals "all".
+            if settings.deck.cards.count > 45 {
+              Chip(label: "45まい", isSelected: settings.count == 45) { settings.count = 45 }
+            }
+            Chip(
+              label: "ぜんぶ（\(settings.deck.cards.count)まい）",
+              isSelected: settings.count <= 0 || settings.count >= settings.deck.cards.count
+            ) { settings.count = 0 }
+          }
         }
-        Chip(
-          label: "ぜんぶ（\(settings.deck.cards.count)まい）",
-          isSelected: settings.count <= 0 || settings.count >= settings.deck.cards.count
-        ) { settings.count = 0 }
-      }
-
-      h2(.class("step")) { "3. タイマー" }
-      div(.class("chips")) {
-        Chip(label: "みせる", isSelected: settings.showTimer) { settings.showTimer = true }
-        Chip(label: "かくす", isSelected: !settings.showTimer) { settings.showTimer = false }
+        div {
+          h2(.class("step")) { "3. タイマー" }
+          div(.class("chips")) {
+            Chip(label: "みせる", isSelected: settings.showTimer) { settings.showTimer = true }
+            Chip(label: "かくす", isSelected: !settings.showTimer) { settings.showTimer = false }
+          }
+        }
       }
 
       div(.class("start")) {
@@ -119,41 +124,63 @@ struct PlaySession {
           p(.class("ready-count")) { "\(drawCount)まい" }
           button(.type(.button), .class("big-button")) { "はじめる" }
             .onClick { start() }
-          p(.class("hint")) { "スペース か → で はじまるよ" }
+          p(.class("hint hint-keys")) { "スペース か → で はじまるよ" }
         }
+        backLink
 
       case .playing:
         div(.class("progress")) {
-          span { "\(index + 1) / \(cards.count)" }
-          if showTimer {
-            LiveTimer(startedAt: startedAt)
+          div(.class("progress-side")) {
+            if let routes {
+              AppRoutes.Link(to: routes.home()) { "✕ やめる" }
+            }
+          }
+          span(.class("progress-count")) { "\(index + 1) / \(cards.count)" }
+          div(.class("progress-side progress-timer")) {
+            if showTimer {
+              LiveTimer(startedAt: startedAt)
+            }
           }
         }
         if index < cards.count {
-          div(.class("card \(deck.colorClass)")) {
-            cards[index].question
+          // The screen is split into two tap zones: left goes back, right goes forward.
+          div(.class("card-area")) {
+            div(.class("card \(deck.colorClass)")) {
+              cards[index].question
+            }
+            div(.class(index > 0 ? "tap-zone tap-previous" : "tap-zone tap-previous disabled")) {
+              span(.class("tap-arrow")) { "‹" }
+            }
+            .onClick { goBack() }
+            div(.class("tap-zone tap-next")) {
+              span(.class("tap-arrow")) { "›" }
+            }
+            .onClick { advance() }
           }
-          .onClick { advance() }
         }
-        p(.class("hint")) { "← まえ ／ → か スペース で つぎ" }
+        p(.class("hint hint-keys")) { "← まえ ／ → か スペース で つぎ" }
+        p(.class("hint hint-touch")) { "ひだりを タップで まえ ／ みぎを タップで つぎ" }
 
       case .finished:
         div(.class("finished")) {
           p(.class("finished-title")) { "おわり！" }
           p(.class("finished-time")) { ClockDisplay(milliseconds: elapsed) }
-          p { "\(cards.count)まい できたね" }
+          p(.class("finished-count")) { "\(cards.count)まい できたね" }
           button(.type(.button), .class("big-button")) { "もういちど" }
             .onClick { phase = .ready }
         }
-      }
-
-      if let routes {
-        div(.class("back")) {
-          AppRoutes.Link(to: routes.home()) { "← カードを えらびなおす" }
-        }
+        backLink
       }
     }
     .attach(BrowserListener.cardKeys { key in handle(key) })
+  }
+
+  private var backLink: some View {
+    div(.class("back")) {
+      if let routes {
+        AppRoutes.Link(to: routes.home()) { "カードを えらびなおす" }
+      }
+    }
   }
 
   private var drawCount: Int {
@@ -168,7 +195,7 @@ struct PlaySession {
     case (.playing, .next):
       advance()
     case (.playing, .previous):
-      if index > 0 { index -= 1 }
+      goBack()
     default:
       break
     }
@@ -180,6 +207,10 @@ struct PlaySession {
     elapsed = 0
     startedAt = Browser.now()
     phase = .playing
+  }
+
+  private func goBack() {
+    if index > 0 { index -= 1 }
   }
 
   private func advance() {
@@ -210,7 +241,7 @@ struct NotFoundPage {
   @Environment(AppRoutes._routeSetEnvironmentKey) var routes
 
   var body: some View {
-    section {
+    section(.class("not-found")) {
       h2 { "ページが みつかりません" }
       if let routes {
         AppRoutes.Link(to: routes.home()) { "トップへ もどる" }
