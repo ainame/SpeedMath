@@ -69,11 +69,11 @@
     .deck-yellow { --deck: #e3a90e; --deck-soft: #fdf2cf; }
     .deck-green { --deck: #2e9e5b; --deck-soft: #dcf3e5; }
 
-    /* ---------- Home: decks 5 : options 3 : start 2 ---------- */
+    /* ---------- Home: options and start take their natural height; decks fill the rest ---------- */
     .home { gap: 1vmin; }
-    .home-decks { flex: 5; min-height: 0; display: flex; flex-direction: column; }
-    .home-options { flex: 3; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 3vmin; align-content: center; }
-    .home-start { flex: 2; min-height: 0; display: flex; align-items: center; justify-content: center; }
+    .home-decks { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+    .home-options { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 3vmin; padding-top: 1.5vmin; }
+    .home-start { flex: none; display: flex; align-items: center; justify-content: center; padding: 3vmin 0 2vmin; }
     .step { font-size: 1rem; line-height: 1.3; margin-bottom: 0.4em; }
     .deck-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 2vmin; padding-bottom: 4px; }
     /* Radio-card selection: outlined cards; the selected one gets its color border, a tint and a check. */
@@ -248,9 +248,7 @@
     /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
     @media (orientation: portrait) {
       .app:has(.home) .app-header h1 { text-align: left; }
-      .home-decks { flex: 5; }
-      .home-options { flex: 3.5; grid-template-columns: 1fr; row-gap: 1.5vmin; }
-      .home-start { flex: 1.5; }
+      .home-options { grid-template-columns: 1fr; row-gap: 1.5vmin; }
       .deck-grid { grid-template-columns: repeat(2, 1fr); }
       .finished { flex-direction: column; gap: 2vmin; }
       .stamp { height: min(45cqh, 70cqw); }
