@@ -354,8 +354,6 @@ final class RemoteLink {
     }
   }
 
-  func revoke() { send("revoke") }
-
   /// Remote: join with a scanned invite. It replaces a half-finished code join, but never an
   /// approved pairing.
   func joinInvite() {
@@ -594,8 +592,10 @@ final class RemoteLink {
       }
     case "peerUp":
       if role == .presenter {
+        // Paired: close the panel and go back to the screen it was opened from.
         update {
           $0.paired = true
+          $0.open = false
           $0.request = nil
           $0.check = nil
           $0.code = nil

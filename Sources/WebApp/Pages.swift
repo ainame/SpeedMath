@@ -272,9 +272,15 @@ struct PlaySession {
     try? router.navigate(to: routes.home())
   }
 
-  private var remoteButton: some View {
-    button(.type(.button), .class("chip remote-toggle")) { "リモコン" }
-      .onClick { showRemote() }
+  /// "リモコン" opens the pairing panel; once a Remote is connected it becomes a status chip.
+  /// Leaving the play screen ends the pairing, so there is no separate unpair button.
+  @ContentBuilder private var remoteButton: some View {
+    if remoteModel.paired {
+      span(.class("chip selected remote-toggle remote-paired")) { "リモコン ✓" }
+    } else {
+      button(.type(.button), .class("chip remote-toggle")) { "リモコン" }
+        .onClick { showRemote() }
+    }
   }
 
   private func showRemote() {

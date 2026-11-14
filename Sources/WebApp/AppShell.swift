@@ -11,9 +11,6 @@ struct AppShell<Content: View> {
     div(.class("app")) {
       header(.class("app-header")) {
         if let routes {
-          div(.class("header-remote")) {
-            AppRoutes.Link(to: routes.remote()) { "リモコン" }
-          }
           AppRoutes.Link(to: routes.home()) {
             h1 { "スピードけいさん" }
           }

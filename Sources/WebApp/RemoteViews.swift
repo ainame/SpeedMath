@@ -40,8 +40,7 @@ struct RemotePanel {
         } else {
           p { model.status }
           if model.paired {
-            button(.type(.button), .class("chip")) { "リモコンを はずす" }
-              .onClick { link?.revoke() }
+            // The panel closes itself once paired; nothing to do here.
           } else if model.retry {
             button(.type(.button), .class("chip")) { "つなぎなおす" }
               .onClick { link?.retry() }

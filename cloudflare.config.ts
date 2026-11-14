@@ -3,8 +3,13 @@ import { bindings, defineConfig, exports } from "cf/config";
 export default defineConfig(({ mode }) => {
   const staging = mode !== "production" && mode !== "production-solo";
   const remoteEnabled = mode !== "staging-solo" && mode !== "production-solo";
+  // Production limits per client and minute. Staging (and the local preview, which builds in
+  // staging mode) allows 4x, because one automated test run alone opens more than 10 sessions.
   const limiter = (id: number, limit: number) =>
-    bindings.rateLimit({ namespace: String(id + (staging ? 100 : 0)), simple: { limit, period: 60 } });
+    bindings.rateLimit({
+      namespace: String(id + (staging ? 100 : 0)),
+      simple: { limit: staging ? limit * 4 : limit, period: 60 },
+    });
   return {
     worker: {
       name: staging ? "speedmath-staging" : "speedmath",
