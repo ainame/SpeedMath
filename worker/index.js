@@ -118,7 +118,18 @@ export class SessionObject extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    this.prepare();
+  }
+
+  prepare() {
     this.sql.exec("CREATE TABLE IF NOT EXISTS session (singleton INTEGER PRIMARY KEY, state TEXT NOT NULL)");
+  }
+
+  // deleteAll drops the SQLite tables too, but this instance may still receive a duplicate
+  // alarm, a stale lookup or a reconnect before it is evicted.
+  async erase() {
+    await this.ctx.storage.deleteAll();
+    this.prepare();
   }
 
   load() {
@@ -336,7 +347,7 @@ export class SessionObject extends DurableObject {
         }
         if (message.type === "end") {
           this.close(ws, "ended");
-          await this.ctx.storage.deleteAll();
+          await this.erase();
         } else {
           this.save(state);
           this.send(ws, "reset");
@@ -376,7 +387,7 @@ export class SessionObject extends DurableObject {
     if (!this.live(state)) {
       if (state) this.clearInvite(state);
       for (const ws of this.ctx.getWebSockets()) this.close(ws, "ended");
-      await this.ctx.storage.deleteAll();
+      await this.erase();
       return;
     }
     const now = Date.now();

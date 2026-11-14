@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --open",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test:worker": "node --import ./Tests/worker/register.mjs --test Tests/worker/*.test.mjs"
   },
   "type": "module",
   "dependencies": {

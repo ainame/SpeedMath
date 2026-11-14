@@ -73,6 +73,8 @@ jobs:
           pnpm exec cf build --mode staging
           pnpm exec node Scripts/check-build.mjs staging
           pnpm exec cf deploy --prebuilt --mode staging --dry-run
+      - name: Test Durable Objects
+        run: pnpm run test:worker
       - name: Run browser and local Worker tests
         run: |
           pnpm exec playwright install --with-deps chromium
