@@ -1,3 +1,9 @@
+import logicModule from "./generated/logic.wasm";
+
+// Pure integer rules shared with the Swift client (Sources/ProtocolModels/Wire.swift `WireRules`),
+// built into a tiny import-free Wasm module by Scripts/build-worker-wasm.sh.
+export const logic = new WebAssembly.Instance(logicModule).exports;
+
 export const VERSION = 1;
 export const FRAME_LIMIT = 8192;
 export const CONTROL_LIMIT = 512;
@@ -27,8 +33,8 @@ export function frame(text) {
 }
 
 // Numeric operands are sent instead of strings. Answers are derived only in the Remote view.
-const card = c => Array.isArray(c) && c.length === 3 && uint(c[0], 18) && c[0] > 0 &&
-  (c[1] === 1 || c[1] === -1) && uint(c[2], 9) && uint(c[0] + c[1] * c[2], 18);
+const card = c => Array.isArray(c) && c.length === 3 && uint(c[0], 18) && (c[1] === 1 || c[1] === -1) &&
+  uint(c[2], 9) && logic.valid_card(c[0], c[1], c[2]) === 1;
 
 export function relayKind(x) {
   switch (x.type) {
@@ -36,8 +42,7 @@ export function relayKind(x) {
       return exact(x, ["v", "type", "epoch", "deckVersion", "version", "phase", "index", "elapsed", "cards"]) &&
         id(x.epoch) && id(x.deckVersion) && uint(x.version) && uint(x.phase, 2) && uint(x.index, 53) &&
         uint(x.elapsed, 86_400_000) && Array.isArray(x.cards) && x.cards.length <= 54 && x.cards.every(card) &&
-        (x.phase === 0 ? x.version === 0 && x.cards.length === 0 && x.index === 0 && x.elapsed === 0 :
-          x.version > 0 && x.index < x.cards.length && (x.phase !== 2 || x.index === x.cards.length - 1)) ? 1 : 0;
+        logic.valid_snapshot(x.version, x.phase, x.index, x.cards.length, x.elapsed) === 1 ? 1 : 0;
     case "ack":
       return exact(x, ["v", "type", "epoch", "id", "result"]) &&
         id(x.epoch) && id(x.id) && uint(x.result, 4) && x.result > 0 ? 2 : 0;

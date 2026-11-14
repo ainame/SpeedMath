@@ -8,7 +8,7 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 - [elementary-router](https://github.com/ainame/elementary-router) (`main` branch, pinned in `Package.resolved`) for typed routes via `@Routes`.
 - JavaScriptKit for the few browser APIs ElementaryUI does not expose.
 - Vite + `@elementary-swift/vite-plugin-swift-wasm`. `npm run build` uses the Embedded Swift SDK (`useEmbeddedSDK: true`); `npm run dev` uses the regular WASM SDK.
-- Swift 6.4 toolchain with matching `swift-6.4.x-RELEASE_wasm` / `_wasm-embedded` SDKs.
+- Swift 6.4.2 toolchain (pinned in `.swift-version`, same as CI) with matching `swift-6.4.2-RELEASE_wasm` / `_wasm-embedded` SDKs.
 
 ## Layout
 
@@ -19,6 +19,8 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 - `Deck.swift`: the four 計算カード decks and their exact card ranges. `Stamp.swift`: reward stamps.
 - `StampBook.swift`, `TodayRecords.swift`, `DailyStorage.swift`: per-day data in localStorage, reset at local midnight.
 - `RemoteLink.swift`: the remote-control client for both roles (WebSocket, reconnect, pairing, ordered sync, command resend). `RemoteWire.swift` validates frames; `RemoteJS.swift` holds timer/listener/promise helpers; `RemoteViews.swift` renders the pairing panel and the Remote screen. Pure wire checks live in `Sources/ProtocolModels`.
+- `worker/index.js`, `worker/protocol.js`: the remote-control backend (Worker, `SessionObject` and `CodeShard` Durable Objects) in JavaScript. Integer-only rules shared with the client (`WireRules`, `Role.canRelay` in `Sources/ProtocolModels/Wire.swift`) come from a tiny import-free Swift Wasm built by `Scripts/build-worker-wasm.sh` (`Sources/Worker/Exports.swift`). A full Swift Worker exists on the `swift-worker` branch; see [docs/decisions/0001-worker-without-async-await.md](docs/decisions/0001-worker-without-async-await.md) for why `main` keeps the JS Worker.
+- `Sources/RemoteProtocol`: browser-side JS helpers (`JSBridge.swift`) and frame validation (`RemoteWire.swift`) used by the remote client.
 - `web/main.js`: only bridges (`window.speedMathBridge`: non-throwing `JSON.parse`, the QR library, sessionStorage). Do not add app logic in JS.
 - `Browser.swift`: JavaScriptKit helpers (time, random, key/interval listeners) and the clock formatting.
 - `index.html`: the whole stylesheet, plus `window.speedMathStorage` (localStorage wrapper with try/catch).

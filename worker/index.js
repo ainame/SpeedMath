@@ -1,8 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
-import logicModule from "./generated/logic.wasm";
-import { VERSION, CONTROL_LIMIT, alphabet, frame, normalizeCode, relayKind, sessionPattern, tokenPattern } from "./protocol.js";
+import { VERSION, CONTROL_LIMIT, alphabet, frame, logic, normalizeCode, relayKind, sessionPattern, tokenPattern } from "./protocol.js";
 
-const logic = new WebAssembly.Instance(logicModule).exports;
 const MINUTE = 60_000;
 const SESSION = 120 * MINUTE;
 const INVITE = 2 * MINUTE;

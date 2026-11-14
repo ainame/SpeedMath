@@ -5,9 +5,9 @@ public enum Wire {
   public static let version = 1
   public static let frameLimit = 8192
   public static let controlLimit = 512
-  public static let maxCards = 54
-  public static let maxElapsed = 86_400_000
-  public static let maxInteger = 2_147_483_647
+  public static let maxCards = WireRules.maxCards
+  public static let maxElapsed = WireRules.maxElapsed
+  public static let maxInteger = WireRules.maxInteger
 
   /// Crockford-style Base32 alphabet used for the hand-typed pairing code.
   public static let codeAlphabet: [UInt8] = Array("0123456789ABCDEFGHJKMNPQRSTVWXYZ".utf8)
@@ -78,9 +78,7 @@ public struct WireCard: Equatable {
   public let rhs: Int
 
   public init?(lhs: Int, sign: Int, rhs: Int) {
-    guard lhs > 0, lhs <= 18, sign == 1 || sign == -1, rhs >= 0, rhs <= 9 else { return nil }
-    let answer = lhs + sign * rhs
-    guard answer >= 0, answer <= 18 else { return nil }
+    guard WireRules.validCard(lhs: lhs, sign: sign, rhs: rhs) else { return nil }
     self.lhs = lhs
     self.sign = sign
     self.rhs = rhs
@@ -103,17 +101,10 @@ public struct Snapshot: Equatable {
     epoch: String, deckVersion: String, version: Int, phase: PlayPhase, index: Int, elapsed: Int,
     cards: [WireCard]
   ) {
-    guard Wire.isID(epoch), Wire.isID(deckVersion), version >= 0, version <= Wire.maxInteger,
-      index >= 0, elapsed >= 0, elapsed <= Wire.maxElapsed, cards.count <= Wire.maxCards
+    guard Wire.isID(epoch), Wire.isID(deckVersion),
+      WireRules.validSnapshot(
+        version: version, phase: Int(phase.rawValue), index: index, count: cards.count, elapsed: elapsed)
     else { return nil }
-    switch phase {
-    case .ready:
-      guard version == 0, cards.isEmpty, index == 0, elapsed == 0 else { return nil }
-    case .playing:
-      guard version > 0, index < cards.count else { return nil }
-    case .finished:
-      guard version > 0, index < cards.count, index == cards.count - 1 else { return nil }
-    }
     self.epoch = epoch
     self.deckVersion = deckVersion
     self.version = version

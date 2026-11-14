@@ -124,7 +124,10 @@ test("a QR scanned into an already open Remote tab joins without reloading", asy
     await remote.evaluate(() => { location.hash = "#/"; });
     await expect(remote.getByRole("link", { name: "リモコン" })).toBeVisible();
     await remote.evaluate(hash => { location.hash = hash; }, link2.hash);
-    await approve(page, remote);
+    // The child's screen is mid-game this time, so the Remote lands on the current card.
+    await expect(remote.getByText("しょうにんを まっています")).toBeVisible();
+    await page.getByRole("button", { name: "つなぐ", exact: true }).click();
+    await expect(remote.locator(".remote-count")).toHaveText("1 / 2");
     expect(await remote.evaluate(() => window.sameDocument)).toBe(true);
   } finally { await context.close(); }
 });

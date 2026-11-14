@@ -1,4 +1,5 @@
 import JavaScriptKit
+import RemoteProtocol
 import ProtocolModels
 
 /// What the Presenter's pairing panel and the Remote screen render.
@@ -308,14 +309,14 @@ final class RemoteLink {
       done(.failure(slow: false))
       return
     }
-    JSPromise2.then(request, { response in
+    JSPromises.then(request, { response in
       guard let response = response.object, response.ok.boolean == true,
         let json = JS.call(response, "json").object
       else {
         done(.failure(slow: response.object?.status.number == 429))
         return
       }
-      JSPromise2.then(json, { value in
+      JSPromises.then(json, { value in
         if let value = value.object { done(.success(value)) } else { done(.failure(slow: false)) }
       }, { done(.failure(slow: false)) })
     }, { done(.failure(slow: false)) })
@@ -576,9 +577,15 @@ final class RemoteLink {
         $0.status = "あたらしい コードを だしてね"
       }
     case "reset":
+      snapshot = nil
+      inFlightCommand = nil
       update {
         $0.online = false
         $0.paired = false
+        $0.busy = false
+        $0.phase = .ready
+        $0.question = ""
+        $0.answer = ""
         $0.request = nil
         $0.check = nil
         $0.code = nil
