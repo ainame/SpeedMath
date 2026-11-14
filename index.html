@@ -55,10 +55,13 @@
     .deck-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 2vmin; padding-bottom: 4px; }
     .deck {
       min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
-      padding: 0.3em; border: 3px solid transparent; border-radius: 1em;
-      background: var(--deck-soft); box-shadow: 0 4px 0 var(--deck);
+      padding: 0.3em; border: none; border-radius: 0.7em; background: var(--deck-soft);
+      transition: background-color 0.15s, color 0.15s;
     }
-    .deck.selected { border-color: var(--deck); }
+    /* Selected deck is filled with its color, like a pressed toggle. */
+    .deck.selected { background: var(--deck); color: #fff; }
+    .deck.selected .deck-title { color: #fff; }
+    .deck.selected .deck-size { opacity: 0.85; }
     /* Deck text scales with the deck button itself. */
     .deck-title { font-size: clamp(0.9rem, min(24cqh, 21cqw), 2.4rem); font-weight: bold; color: var(--deck); line-height: 1.1; }
     .deck-subtitle { font-size: clamp(0.7rem, min(12cqh, 12cqw), 1.3rem); font-weight: bold; }
@@ -173,27 +176,26 @@
     .records { text-align: center; gap: 1.5vmin; }
     .records-title { font-size: 1.2rem; }
     .records-list {
-      flex: 1; min-height: 0; box-sizing: border-box; width: min(100%, 34em); align-self: center; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
-      display: flex; flex-direction: column; gap: 0.5em; padding: 0.6em;
-      border-radius: 1.2rem; background: #fff; box-shadow: inset 0 0 0 3px #e0c97a;
-      touch-action: pan-y;
+      flex: 1; min-height: 0; box-sizing: border-box; width: min(100%, 34em); align-self: center;
+      overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+      display: flex; flex-direction: column; padding: 0 1em;
+      border-radius: 0.8em; background: #fff;
     }
     .records-empty { margin: auto; font-weight: bold; opacity: 0.7; }
-    /* Rows keep their columns close together and centered instead of spreading across wide screens. */
+    /* A plain list: rows separated by thin lines; the deck is told apart by its colored name. */
     .record-row {
-      flex: none; box-sizing: border-box; width: 100%;
-      display: grid; grid-template-columns: 3em 1fr 3.4em 3.4em 5em; align-items: center; gap: 0.6em;
-      padding: 0.45em 0.8em; border-radius: 0.8em; background: var(--deck-soft);
-      border-left: 0.4em solid var(--deck); text-align: left; font-weight: bold;
+      flex: none; display: grid; grid-template-columns: 3em 1fr 3.4em 3.4em 5em; align-items: center; gap: 0.6em;
+      padding: 0.6em 0; border-bottom: 1px solid #efe6c8; text-align: left;
     }
-    .record-at { font-size: 0.85rem; opacity: 0.6; font-variant-numeric: tabular-nums; }
+    .record-row:last-child { border-bottom: none; }
+    .record-at { font-size: 0.85rem; opacity: 0.55; font-variant-numeric: tabular-nums; }
     .record-deck { display: flex; align-items: baseline; gap: 0.5em; min-width: 0; }
-    .record-deck-title { color: var(--deck); font-size: 1.05rem; }
-    .record-deck-subtitle { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-deck-title { color: var(--deck); font-size: 1.05rem; font-weight: bold; }
+    .record-deck-subtitle { font-size: 0.85rem; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .record-count { font-size: 0.95rem; text-align: right; }
-    .record-zero { font-size: 0.8rem; padding: 0.15em 0; border-radius: 999px; background: #fff; color: var(--deck); text-align: center; }
-    .record-zero.off { opacity: 0.55; }
-    .record-row .clock { font-size: 1.1rem; justify-content: flex-end; color: #ff8a3d; }
+    .record-zero { font-size: 0.85rem; text-align: center; opacity: 0.8; }
+    .record-zero.off { opacity: 0.45; }
+    .record-row .clock { font-size: 1.1rem; font-weight: bold; justify-content: flex-end; }
     .records-summary { font-weight: bold; min-height: 1.2em; }
 
     .not-found { align-items: center; justify-content: center; gap: 1em; }
