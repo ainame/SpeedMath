@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- SpeedMath original stamp artwork (MIT). -->
+  <defs>
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="7" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="3" result="rough"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="3" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.2 0 0 0 2.25" result="holes"/>
+      <feComposite in="rough" in2="holes" operator="in"/>
+    </filter>
+  </defs>
+  <g filter="url(#ink)" fill="none" stroke="#d62f3a" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="100" cy="100" r="92" stroke-width="7"/>
+    <circle cx="100" cy="100" r="82" stroke-width="2.5"/>
+    <path d="M100 86 C 82 70, 84 44, 94 38 L100 46 L106 38 C 116 44, 118 70, 100 86 Z" transform="rotate(0 100 86)" stroke-width="4.5"/>
+    <path d="M100 86 C 82 70, 84 44, 94 38 L100 46 L106 38 C 116 44, 118 70, 100 86 Z" transform="rotate(72 100 86)" stroke-width="4.5"/>
+    <path d="M100 86 C 82 70, 84 44, 94 38 L100 46 L106 38 C 116 44, 118 70, 100 86 Z" transform="rotate(144 100 86)" stroke-width="4.5"/>
+    <path d="M100 86 C 82 70, 84 44, 94 38 L100 46 L106 38 C 116 44, 118 70, 100 86 Z" transform="rotate(216 100 86)" stroke-width="4.5"/>
+    <path d="M100 86 C 82 70, 84 44, 94 38 L100 46 L106 38 C 116 44, 118 70, 100 86 Z" transform="rotate(288 100 86)" stroke-width="4.5"/>
+    <circle cx="100" cy="86" r="6" fill="#d62f3a" stroke="none"/>
+    <path d="M100 86 L100 74 M100 86 L111 82 M100 86 L89 82 M100 86 L107 96 M100 86 L93 96" stroke-width="2.5"/>
+    <text x="100" y="152" font-family="'Hiragino Maru Gothic ProN','BIZ UDPGothic','Rounded Mplus 1c',sans-serif" font-size="21" font-weight="bold" fill="#d62f3a" stroke="none" text-anchor="middle" letter-spacing="0">できたね！</text>
+  </g>
+</svg>

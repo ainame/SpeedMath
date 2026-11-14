@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- SpeedMath original stamp artwork (MIT). -->
+  <defs>
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="7" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="3" result="rough"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="3" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.2 0 0 0 2.25" result="holes"/>
+      <feComposite in="rough" in2="holes" operator="in"/>
+    </filter>
+  </defs>
+  <g filter="url(#ink)" fill="none" stroke="#d62f3a" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="100" cy="100" r="92" stroke-width="7"/>
+    <circle cx="100" cy="100" r="82" stroke-width="2.5"/>
+    <polygon points="100.0,31.0 102.4,36.7 108.6,37.2 103.9,41.3 105.3,47.3 100.0,44.0 94.7,47.3 96.1,41.3 91.4,37.2 97.6,36.7" fill="#d62f3a" stroke="none"/>
+    <polygon points="64.0,46.5 65.5,50.0 69.2,50.3 66.4,52.8 67.2,56.4 64.0,54.5 60.8,56.4 61.6,52.8 58.8,50.3 62.5,50.0" fill="#d62f3a" stroke="none"/>
+    <polygon points="136.0,46.5 137.5,50.0 141.2,50.3 138.4,52.8 139.2,56.4 136.0,54.5 132.8,56.4 133.6,52.8 130.8,50.3 134.5,50.0" fill="#d62f3a" stroke="none"/>
+    <text x="100" y="100" font-family="'Hiragino Maru Gothic ProN','BIZ UDPGothic','Rounded Mplus 1c',sans-serif" font-size="44" font-weight="bold" fill="#d62f3a" stroke="none" text-anchor="middle" letter-spacing="4">よく</text>
+    <text x="100" y="142" font-family="'Hiragino Maru Gothic ProN','BIZ UDPGothic','Rounded Mplus 1c',sans-serif" font-size="23" font-weight="bold" fill="#d62f3a" stroke="none" text-anchor="middle" letter-spacing="0">できました</text>
+    <path d="M70 156 Q100 167 130 156" stroke-width="4"/>
+  </g>
+</svg>

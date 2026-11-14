@@ -132,6 +132,7 @@ struct PlaySession {
   @State var index: Int = 0
   @State var startedAt: Double = 0
   @State var elapsed: Double = 0
+  @State var stamp: Stamp = .yokuDekimashita
 
   var body: some View {
     section(.class("play")) {
@@ -182,11 +183,14 @@ struct PlaySession {
 
       case .finished:
         div(.class("finished")) {
-          p(.class("finished-title")) { "おわり！" }
-          p(.class("finished-time")) { ClockDisplay(milliseconds: elapsed) }
-          p(.class("finished-count")) { "\(cards.count)まい できたね" }
-          button(.type(.button), .class("big-button")) { "もういちど" }
-            .onClick { phase = .ready }
+          img(.src(stamp.path), .alt(stamp.label), .class("stamp"))
+          div(.class("finished-info")) {
+            p(.class("finished-title")) { "おわり！" }
+            p(.class("finished-time")) { ClockDisplay(milliseconds: elapsed) }
+            p(.class("finished-count")) { "\(cards.count)まい できたね" }
+            button(.type(.button), .class("big-button")) { "もういちど" }
+              .onClick { phase = .ready }
+          }
         }
         backLink
       }
@@ -237,6 +241,7 @@ struct PlaySession {
       index += 1
     } else {
       elapsed = Browser.now() - startedAt
+      stamp = Stamp.random()
       phase = .finished
     }
   }

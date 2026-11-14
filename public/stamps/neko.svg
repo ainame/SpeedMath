@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- SpeedMath original stamp artwork (MIT). -->
+  <defs>
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="7" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="3" result="rough"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="3" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.2 0 0 0 2.25" result="holes"/>
+      <feComposite in="rough" in2="holes" operator="in"/>
+    </filter>
+  </defs>
+  <g filter="url(#ink)" fill="none" stroke="#d62f3a" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="100" cy="100" r="92" stroke-width="7"/>
+    <circle cx="100" cy="100" r="82" stroke-width="2.5"/>
+    <path d="M62 62 L66 30 L86 50" stroke-width="5"/>
+    <path d="M138 62 L134 30 L114 50" stroke-width="5"/>
+    <ellipse cx="100" cy="86" rx="44" ry="38" stroke-width="5"/>
+    <path d="M76 82 Q83 74 90 82" stroke-width="4.5"/>
+    <path d="M110 82 Q117 74 124 82" stroke-width="4.5"/>
+    <path d="M96 92 L104 92 L100 97 Z" fill="#d62f3a" stroke-width="2"/>
+    <path d="M100 97 Q95 105 89 101 M100 97 Q105 105 111 101" stroke-width="3.5"/>
+    <path d="M48 88 L72 92 M48 100 L72 98 M152 88 L128 92 M152 100 L128 98" stroke-width="3"/>
+    <text x="100" y="152" font-family="'Hiragino Maru Gothic ProN','BIZ UDPGothic','Rounded Mplus 1c',sans-serif" font-size="23" font-weight="bold" fill="#d62f3a" stroke="none" text-anchor="middle" letter-spacing="0">すごい！</text>
+  </g>
+</svg>

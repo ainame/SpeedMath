@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- SpeedMath original stamp artwork (MIT). -->
+  <defs>
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="7" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="3" result="rough"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="3" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.2 0 0 0 2.25" result="holes"/>
+      <feComposite in="rough" in2="holes" operator="in"/>
+    </filter>
+  </defs>
+  <g filter="url(#ink)" fill="none" stroke="#d62f3a" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="100" cy="100" r="92" stroke-width="7"/>
+    <circle cx="100" cy="100" r="82" stroke-width="2.5"/>
+    <g transform="translate(0 -4)">
+    <ellipse cx="82" cy="54" rx="11" ry="22" transform="rotate(-12 82 54)" stroke-width="5"/>
+    <ellipse cx="118" cy="54" rx="11" ry="22" transform="rotate(12 118 54)" stroke-width="5"/>
+    <ellipse cx="82" cy="56" rx="4" ry="12" transform="rotate(-12 82 56)" stroke-width="3"/>
+    <ellipse cx="118" cy="56" rx="4" ry="12" transform="rotate(12 118 56)" stroke-width="3"/>
+    <ellipse cx="100" cy="100" rx="40" ry="33" stroke-width="5"/>
+    <circle cx="85" cy="96" r="4.5" fill="#d62f3a" stroke="none"/>
+    <circle cx="115" cy="96" r="4.5" fill="#d62f3a" stroke="none"/>
+    <path d="M96 104 L104 104 L100 108 Z" fill="#d62f3a" stroke-width="2"/>
+    <path d="M100 108 L100 113 M100 113 Q94 118 90 114 M100 113 Q106 118 110 114" stroke-width="3"/>
+    <path d="M70 108 L76 108 M124 108 L130 108" stroke-width="3"/>
+    </g>
+    <text x="100" y="156" font-family="'Hiragino Maru Gothic ProN','BIZ UDPGothic','Rounded Mplus 1c',sans-serif" font-size="23" font-weight="bold" fill="#d62f3a" stroke="none" text-anchor="middle" letter-spacing="0">えらい！</text>
+  </g>
+</svg>
