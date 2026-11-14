@@ -10,9 +10,14 @@ let package = Package(
     .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.62.0"),
   ],
   targets: [
+    .target(name: "ProtocolModels"),
+    .target(name: "SessionLogic", dependencies: ["ProtocolModels"]),
+    .testTarget(name: "SessionLogicTests", dependencies: ["SessionLogic", "ProtocolModels"]),
     .executableTarget(
       name: "WebApp",
       dependencies: [
+        "SessionLogic",
+        "ProtocolModels",
         .product(name: "ElementaryUI", package: "elementary-ui"),
         .product(name: "ElementaryRouter", package: "elementary-router"),
       ],
