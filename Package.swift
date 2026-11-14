@@ -13,11 +13,25 @@ let package = Package(
     .target(name: "ProtocolModels"),
     .target(name: "SessionLogic", dependencies: ["ProtocolModels"]),
     .testTarget(name: "SessionLogicTests", dependencies: ["SessionLogic", "ProtocolModels"]),
+    .target(
+      name: "RemoteProtocol",
+      dependencies: ["ProtocolModels", .product(name: "JavaScriptKit", package: "JavaScriptKit")],
+      swiftSettings: [.swiftLanguageMode(.v5)]
+    ),
+    .executableTarget(
+      name: "Worker",
+      dependencies: [
+        "ProtocolModels", "RemoteProtocol",
+        .product(name: "JavaScriptKit", package: "JavaScriptKit"),
+      ],
+      swiftSettings: [.swiftLanguageMode(.v5)]
+    ),
     .executableTarget(
       name: "WebApp",
       dependencies: [
         "SessionLogic",
         "ProtocolModels",
+        "RemoteProtocol",
         .product(name: "ElementaryUI", package: "elementary-ui"),
         .product(name: "ElementaryRouter", package: "elementary-router"),
       ],

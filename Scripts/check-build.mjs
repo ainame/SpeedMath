@@ -13,12 +13,13 @@ assert.equal(worker.name, mode.startsWith("production") ? "speedmath" : "speedma
 assert.deepEqual(worker.assets.runWorkerFirst, ["/api/*"]);
 assert.equal(worker.env.REMOTE_ENABLED.value, !mode.endsWith("-solo"));
 for (const name of ["SessionObject", "CodeShard"]) assert.equal(worker.exports[name].storage, "sqlite");
-const logic = Object.entries(worker.manifest.modules).find(([, m]) => m.type === "wasm")?.[0];
-assert.ok(logic);
-const bytes = await readFile(join(dir, "bundle", logic));
-const module = new WebAssembly.Module(bytes);
-assert.deepEqual(WebAssembly.Module.imports(module), []);
-assert.equal(new WebAssembly.Instance(module).exports.protocol_version(), 1);
+const wasm = Object.entries(worker.manifest.modules).filter(([, m]) => m.type === "wasm").map(([name]) => name);
+assert.equal(wasm.length, 1, "one Swift Worker Wasm module");
+const bytes = await readFile(join(dir, "bundle", wasm[0]));
+const imports = new Set(WebAssembly.Module.imports(new WebAssembly.Module(bytes)).map(i => i.module));
+// Embedded Swift with JavaScriptKit: no regular Swift runtime, so the module stays small.
+for (const name of imports) assert.ok(["javascript_kit", "bjs", "wasi_snapshot_preview1"].includes(name), name);
+assert.ok(bytes.length < 1_000_000, `Worker Wasm is ${bytes.length} B; expected the Embedded build`);
 const app = (await readdir(join(dir, "assets/assets"))).find(name => /^WebApp-.*\.wasm$/.test(name));
 assert.ok(app);
 console.log(`${worker.name} (${mode}): Worker Wasm ${bytes.length} B; browser Wasm ${(await readFile(join(dir, "assets/assets", app))).length} B`);

@@ -3,9 +3,9 @@ import ProtocolModels
 
 /// Decodes and encodes WebSocket frames. JSON text is parsed by JS (`JSON.parse` through the
 /// bridge); every field is then checked here before the client acts on it.
-enum RemoteWire {
+public enum RemoteWire {
   /// A frame within the size limit that parses to `{ v: 1, type: "...", ... }`.
-  static func frame(_ value: JSValue) -> JSObject? {
+  public static func frame(_ value: JSValue) -> JSObject? {
     guard let text = value.string, text.utf8.count <= Wire.frameLimit,
       let object = JS.parse(text), !JS.isArray(object),
       Wire.uint(object.v.number) == Wire.version, object.type.string != nil
@@ -13,7 +13,7 @@ enum RemoteWire {
     return object
   }
 
-  static func packet(_ type: String, _ fill: (JSObject) -> Void = { _ in }) -> String {
+  public static func packet(_ type: String, _ fill: (JSObject) -> Void = { _ in }) -> String {
     let object = JS.object()
     object["v"] = Wire.version.jsValue
     object["type"] = type.jsValue
@@ -26,7 +26,7 @@ enum RemoteWire {
     return text
   }
 
-  static func snapshot(_ x: JSObject) -> Snapshot? {
+  public static func snapshot(_ x: JSObject) -> Snapshot? {
     guard JS.keyCount(x) == 9, let epoch = id(x.epoch), let deckVersion = id(x.deckVersion),
       let version = Wire.uint(x.version.number), let rawPhase = Wire.uint(x.phase.number, max: 2),
       let phase = PlayPhase(rawValue: Int32(rawPhase)), let index = Wire.uint(x.index.number, max: 53),
@@ -49,20 +49,20 @@ enum RemoteWire {
       elapsed: elapsed, cards: cards)
   }
 
-  struct Ack {
-    let epoch: String
-    let id: String
-    let result: Int
+  public struct Ack {
+    public let epoch: String
+    public let id: String
+    public let result: Int
   }
 
-  static func ack(_ x: JSObject) -> Ack? {
+  public static func ack(_ x: JSObject) -> Ack? {
     guard JS.keyCount(x) == 5, let epoch = id(x.epoch), let commandID = id(x.id),
       let result = Wire.uint(x.result.number, max: 4), result > 0
     else { return nil }
     return Ack(epoch: epoch, id: commandID, result: result)
   }
 
-  static func command(_ x: JSObject) -> Command? {
+  public static func command(_ x: JSObject) -> Command? {
     guard JS.keyCount(x) == 6, let epoch = id(x.epoch), let commandID = id(x.id),
       let baseVersion = Wire.uint(x.baseVersion.number), let raw = x.direction.number,
       raw == 1 || raw == -1, let direction = Direction(rawValue: Int32(raw))
@@ -70,9 +70,9 @@ enum RemoteWire {
     return Command(id: commandID, epoch: epoch, baseVersion: baseVersion, direction: direction)
   }
 
-  static func isRequestSync(_ x: JSObject) -> Bool { JS.keyCount(x) == 2 }
+  public static func isRequestSync(_ x: JSObject) -> Bool { JS.keyCount(x) == 2 }
 
-  static func fillSnapshot(_ object: JSObject, _ snapshot: Snapshot) {
+  public static func fillSnapshot(_ object: JSObject, _ snapshot: Snapshot) {
     object["epoch"] = snapshot.epoch.jsValue
     object["deckVersion"] = snapshot.deckVersion.jsValue
     object["version"] = snapshot.version.jsValue

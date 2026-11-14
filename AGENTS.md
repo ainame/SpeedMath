@@ -8,7 +8,7 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 - [elementary-router](https://github.com/ainame/elementary-router) (`main` branch, pinned in `Package.resolved`) for typed routes via `@Routes`.
 - JavaScriptKit for the few browser APIs ElementaryUI does not expose.
 - Vite + `@elementary-swift/vite-plugin-swift-wasm`. `npm run build` uses the Embedded Swift SDK (`useEmbeddedSDK: true`); `npm run dev` uses the regular WASM SDK.
-- Swift 6.4 toolchain with matching `swift-6.4.x-RELEASE_wasm` / `_wasm-embedded` SDKs.
+- Swift 6.4.2 toolchain (pinned in `.swift-version`, same as CI) with matching `swift-6.4.2-RELEASE_wasm` / `_wasm-embedded` SDKs.
 
 ## Layout
 
@@ -19,6 +19,8 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 - `Deck.swift`: the four 計算カード decks and their exact card ranges. `Stamp.swift`: reward stamps.
 - `StampBook.swift`, `TodayRecords.swift`, `DailyStorage.swift`: per-day data in localStorage, reset at local midnight.
 - `RemoteLink.swift`: the remote-control client for both roles (WebSocket, reconnect, pairing, ordered sync, command resend). `RemoteWire.swift` validates frames; `RemoteJS.swift` holds timer/listener/promise helpers; `RemoteViews.swift` renders the pairing panel and the Remote screen. Pure wire checks live in `Sources/ProtocolModels`.
+- `Sources/Worker`: the remote-control backend in Swift (Embedded): `Router` (`/api/*`), `SessionObject` and `CodeShard` (Durable Objects), `Platform` (Workers runtime access). `worker/index.js` only forwards Cloudflare's calls to it, because Workers require the entry and Durable Object classes to be JavaScript. Asynchronous steps use `Deferred` instead of `async`/`await`; see [docs/decisions/0001-worker-without-async-await.md](docs/decisions/0001-worker-without-async-await.md) before changing that.
+- `Sources/RemoteProtocol`: shared by the browser and the Worker: JS helpers (`JSBridge.swift`), frame validation (`RemoteWire.swift`) and `Deferred`.
 - `web/main.js`: only bridges (`window.speedMathBridge`: non-throwing `JSON.parse`, the QR library, sessionStorage). Do not add app logic in JS.
 - `Browser.swift`: JavaScriptKit helpers (time, random, key/interval listeners) and the clock formatting.
 - `index.html`: the whole stylesheet, plus `window.speedMathStorage` (localStorage wrapper with try/catch).

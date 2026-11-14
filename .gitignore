@@ -7,7 +7,6 @@ node_modules
 
 .cloudflare
 
-worker/generated/
 
 /test-results/
 /playwright-report/
