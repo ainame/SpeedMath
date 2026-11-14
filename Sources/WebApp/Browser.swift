@@ -28,6 +28,8 @@ struct BrowserRandom: RandomNumberGenerator {
 enum CardKey {
   case next
   case previous
+  /// Esc: leave the play screen, same as the ✕ やめる button.
+  case quit
 }
 
 /// Owns one JS listener (keydown or interval) for the lifetime of a mounted view.
@@ -49,7 +51,7 @@ final class BrowserListener {
     stop = nil
   }
 
-  /// Listens for →, Space and ← on the document. Repeats from a held key are ignored, and handled
+  /// Listens for →, Space, ← and Esc on the document. Repeats from a held key are ignored, and handled
   /// keys call `preventDefault()` so Space does not scroll the page.
   static func cardKeys(_ handler: @escaping (CardKey) -> Void) -> BrowserListener {
     BrowserListener {
@@ -63,6 +65,7 @@ final class BrowserListener {
         switch event.key.string {
         case "ArrowRight", " ": key = .next
         case "ArrowLeft": key = .previous
+        case "Escape": key = .quit
         default: return .undefined
         }
         _ = event["preventDefault"].function?.callAsFunction(this: event)

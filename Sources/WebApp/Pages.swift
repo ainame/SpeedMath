@@ -134,6 +134,7 @@ struct PlaySession {
   }
 
   @Environment(AppRoutes._routeSetEnvironmentKey) var routes
+  @Environment(AppRoutes._routerEnvironmentKey) var router
 
   let deck: Deck
   let count: Int
@@ -195,7 +196,7 @@ struct PlaySession {
               .onClick { advance() }
           }
         }
-        p(.class("hint hint-keys")) { "← まえ ／ → か スペース で つぎ" }
+        p(.class("hint hint-keys")) { "← まえ ／ → か スペース で つぎ ／ esc で やめる" }
         p(.class("hint hint-touch")) { "ひだりを タップで まえ ／ みぎを タップで つぎ" }
 
       case .finished:
@@ -244,9 +245,17 @@ struct PlaySession {
       advance()
     case (.playing, .previous):
       goBack()
+    case (_, .quit):
+      quit()
     default:
       break
     }
+  }
+
+  /// Back to the home screen, like the ✕ やめる button.
+  private func quit() {
+    guard let routes, let router else { return }
+    try? router.navigate(to: routes.home())
   }
 
   private func start() {
