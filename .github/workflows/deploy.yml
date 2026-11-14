@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Install binaryen (wasm-opt), curl and zstd
         run: apt-get update && apt-get install -y binaryen curl zstd
-      - name: Install Node.js, pnpm and Wrangler
+      - name: Install Node.js and pnpm
         uses: jdx/mise-action@v3
         with:
           version: 2026.11.1
@@ -49,9 +49,9 @@ jobs:
       - name: Install dependencies
         run: swift package resolve && pnpm install --frozen-lockfile
       - name: Build
-        run: pnpm run build
+        run: pnpm exec cf build
       - name: Deploy to Cloudflare Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: mise exec -- wrangler deploy
+        run: pnpm exec cf deploy --prebuilt --mode production

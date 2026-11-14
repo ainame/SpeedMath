@@ -11,7 +11,9 @@
     "@bjorn3/browser_wasi_shim": "~0.4.2"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.17",
     "@elementary-swift/vite-plugin-swift-wasm": "~0.2.0",
+    "cf": "1.0.0-beta.32",
     "vite": "^8.0.0"
   }
 }

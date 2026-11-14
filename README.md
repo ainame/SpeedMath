@@ -42,8 +42,10 @@ Swift で書かれていて、WebAssembly としてブラウザで動きます�
 mise install
 mise exec -- pnpm install --frozen-lockfile
 mise exec -- pnpm run dev      # 開発サーバー（Swift の変更でホットリロード）
-mise exec -- pnpm run build    # リリースビルド（Embedded Swift）
+mise exec -- pnpm exec cf build # Cloudflare 向けビルド（Embedded Swift）
 ```
+
+Cloudflare CLI は beta です。`mise exec -- pnpm exec cf auth login` でログイン後、`mise exec -- pnpm exec cf deploy` で Worker をビルド・公開できます。`cf deploy --dry-run` はアップロードせずに検証します。`wrangler.jsonc` は移行確認のため残していますが、`cf` は `cloudflare.config.ts` を使用します。
 
 `main` に push すると GitHub Actions が Cloudflare Workers Static Assets にデプロイします。GitHub Actions の secrets に `CLOUDFLARE_API_TOKEN`（Workers のデプロイ権限）と `CLOUDFLARE_ACCOUNT_ID` を設定してください。Cloudflare への移行完了までは、上記の GitHub Pages 版を利用できます。
 
