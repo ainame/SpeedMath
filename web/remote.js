@@ -309,6 +309,8 @@ class Link {
     if (command && command.epoch !== state.epoch) this.uncertain();
     this.update({ online: true, status: state.phase === 0 ? "はじまるのを まっています" : syncedText,
       phase: state.phase, index: state.index + 1, count: state.cards.length, elapsed: state.elapsed,
+      // Same clock as the Swift side's Browser.now(); the Remote counts on locally between snapshots.
+      startedAt: performance.now() - state.elapsed,
       question: card ? `${card[0]} ${card[1] === 1 ? "+" : "−"} ${card[2]}` : "",
       answer: card ? String(card[0] + card[1] * card[2]) : "" });
     if (this.inFlightCommand && !this.commandTimer) this.transmit();

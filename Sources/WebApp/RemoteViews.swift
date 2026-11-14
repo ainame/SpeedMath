@@ -97,53 +97,9 @@ struct RemotePage {
   @State var code = ""
 
   var body: some View {
-    section(.class("remote-page")) {
-      h2 { "リモコン" }
-      p(.class("remote-status")) { model?["status"].string ?? "" }
-      if model?["paired"].boolean == true {
-        if let question = model?["question"].string, !question.isEmpty {
-          p(.class("remote-count")) {
-            "\(Int(model?["index"].number ?? 0)) / \(Int(model?["count"].number ?? 0))"
-          }
-          p(.class("remote-problem")) { question }
-          p(.class("remote-answer")) { "こたえ：\(model?["answer"].string ?? "")" }
-          div(.class("remote-actions")) {
-            moveButton("← まえ", direction: -1)
-            moveButton("つぎ →", direction: 1)
-          }
-        } else if model?["phase"].number == 2 {
-          p(.class("remote-problem")) { "おわり！" }
-          ClockDisplay(milliseconds: model?["elapsed"].number ?? 0)
-        }
-        if let notice = model?["notice"].string, !notice.isEmpty {
-          p(.class("remote-notice")) { notice }
-        }
-      } else if let check = model?["check"].string {
-        p { "こどもの がめんと おなじ もじか たしかめてね。" }
-        p(.class("pair-code")) { check }
-      } else if model?["joining"].boolean != true {
-        p { "こどもの がめんに でている コードを いれてね。" }
-        label {
-          "コード "
-          input(.type(.text), .placeholder("XXXX-XXXX-XXXX"), .class("remote-code-input"))
-            .bindValue($code)
-        }
-        button(.type(.button), .class("chip")) { "コードで つなぐ" }
-          .onClick {
-            if let link { _ = link.begin.function?.callAsFunction(this: link, code) }
-          }
-      }
-      if model?["retry"].boolean == true {
-        button(.type(.button), .class("chip")) { "つなぎなおす" }
-          .onClick {
-            if let link { _ = link.retry.function?.callAsFunction(this: link) }
-          }
-      }
-      div(.class("back")) {
-        if let routes {
-          AppRoutes.Link(to: routes.home()) { "もどる" }
-        }
-      }
+    let paired = model?["paired"].boolean == true
+    section(.class(paired ? "remote-page remote-live" : "remote-page remote-pairing")) {
+      if paired { liveView } else { pairingView }
     }
     .onAppear { link = RemoteBrowser.mount(role: 2) { model = $0 } }
     .onDisappear {
@@ -152,13 +108,131 @@ struct RemotePage {
     }
   }
 
-  private func moveButton(_ title: String, direction: Int) -> some View {
+  /// Paired: a full-screen controller. Landscape puts まえ / つぎ under the thumbs on either
+  /// side of the card; portrait stacks the card above two wide buttons.
+  private var liveView: some View {
+    Group {
+      div(.class("remote-bar")) {
+        div(.class("progress-side")) {
+          if let routes {
+            AppRoutes.Link(to: routes.home()) { "✕ やめる" }
+          }
+        }
+        span(.class("remote-count")) {
+          if phase == 1 {
+            "\(Int(model?["index"].number ?? 0)) / \(Int(model?["count"].number ?? 0))"
+          }
+        }
+        div(.class("progress-side progress-timer")) {
+          if phase >= 1 { RemoteClock(model: model) }
+        }
+      }
+      div(.class(phase == 1 ? "remote-stage" : "remote-stage remote-stage-idle")) {
+        if phase == 1 { moveButton(direction: -1) }
+        div(.class("remote-card")) {
+          if phase == 1, let question = model?["question"].string, !question.isEmpty {
+            p(.class("remote-problem")) { question }
+            p(.class("remote-answer")) {
+              span(.class("remote-answer-label")) { "こたえ" }
+              span(.class("remote-answer-value")) { model?["answer"].string ?? "" }
+            }
+          } else if phase == 2 {
+            p(.class("remote-message")) { "おわり！" }
+            p(.class("remote-final-time")) { ClockDisplay(milliseconds: model?["elapsed"].number ?? 0) }
+          } else {
+            p(.class("remote-message")) { "はじまるのを まっています" }
+          }
+        }
+        if phase == 1 { moveButton(direction: 1) }
+      }
+      div(.class("remote-footer")) {
+        if let notice = model?["notice"].string, !notice.isEmpty {
+          p(.class("remote-notice")) { notice }
+        } else if model?["online"].boolean != true {
+          // While online the card itself shows the state; the footer only reports trouble.
+          p(.class("remote-status remote-offline")) { model?["status"].string ?? "" }
+        }
+        if model?["retry"].boolean == true {
+          button(.type(.button), .class("chip")) { "つなぎなおす" }
+            .onClick { call("retry") }
+        }
+      }
+    }
+  }
+
+  private var pairingView: some View {
+    Group {
+      if let check = model?["check"].string {
+        p(.class("remote-lead")) { "こどもの がめんと おなじ もじか たしかめてね。" }
+        p(.class("pair-code remote-check")) { check }
+        p(.class("remote-status")) { model?["status"].string ?? "" }
+      } else if model?["joining"].boolean == true {
+        p(.class("remote-status")) { model?["status"].string ?? "" }
+      } else {
+        p(.class("remote-lead")) { "こどもの がめんに でている コードを いれてね。" }
+        label(.class("remote-code-field")) {
+          span(.class("remote-code-label")) { "コード" }
+          input(
+            .type(.text), .placeholder("XXXX-XXXX-XXXX"), .class("remote-code-input"),
+            .custom(name: "autocapitalize", value: "characters"),
+            .custom(name: "autocomplete", value: "off"), .custom(name: "spellcheck", value: "false")
+          )
+          .bindValue($code)
+        }
+        button(.type(.button), .class("big-button")) { "コードで つなぐ" }
+          .onClick {
+            if let link { _ = link.begin.function?.callAsFunction(this: link, code) }
+          }
+        if let status = model?["status"].string, !status.isEmpty {
+          p(.class("remote-status")) { status }
+        }
+      }
+      if model?["retry"].boolean == true {
+        button(.type(.button), .class("chip")) { "つなぎなおす" }
+          .onClick { call("retry") }
+      }
+      div(.class("back")) {
+        if let routes {
+          AppRoutes.Link(to: routes.home()) { "もどる" }
+        }
+      }
+    }
+  }
+
+  private var phase: Int { Int(model?["phase"].number ?? 0) }
+
+  private func call(_ method: String) {
+    if let link { _ = link[method].function?.callAsFunction(this: link) }
+  }
+
+  private func moveButton(direction: Int) -> some View {
     let enabled = model?["online"].boolean == true && model?["busy"].boolean != true &&
       (direction > 0 || (model?["index"].number ?? 0) > 1)
-    return button(.type(.button), .class("chip")) { title }
-      .attributes(.disabled, when: !enabled)
-      .onClick {
-        if let link { _ = link.move.function?.callAsFunction(this: link, direction) }
-      }
+    let next = direction > 0
+    return button(.type(.button), .class(next ? "remote-move remote-next" : "remote-move remote-previous")) {
+      span(.class("remote-move-arrow"), .custom(name: "aria-hidden", value: "true")) { next ? "→" : "←" }
+      span(.class("remote-move-label")) { next ? "つぎ" : "まえ" }
+    }
+    .attributes(.disabled, when: !enabled)
+    .onClick {
+      if let link { _ = link.move.function?.callAsFunction(this: link, direction) }
+    }
+  }
+}
+
+/// The Presenter only sends its elapsed time with each state change, so the Remote keeps a local
+/// clock from the moment that snapshot arrived and freezes it while the Presenter is unreachable.
+@View
+struct RemoteClock {
+  let model: JSObject?
+
+  var body: some View {
+    if model?["phase"].number == 1, model?["online"].boolean == true,
+      let startedAt = model?["startedAt"].number
+    {
+      LiveTimer(startedAt: startedAt)
+    } else {
+      ClockDisplay(milliseconds: model?["elapsed"].number ?? 0)
+    }
   }
 }

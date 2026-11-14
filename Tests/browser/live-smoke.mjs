@@ -27,7 +27,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 45000));
   }
   const before = Date.now();
-  await remote.getByRole("button", { name: "つぎ →" }).click({ timeout: 20000 });
+  await remote.getByRole("button", { name: "つぎ" }).click({ timeout: 20000 });
   await presenter.getByText("2 / 3", { exact: true }).waitFor();
   await remote.getByText("2 / 3", { exact: true }).waitFor();
   console.log("Exactly one step applied and synchronized:", Date.now() - before, "ms");

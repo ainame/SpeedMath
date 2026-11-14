@@ -279,19 +279,82 @@
     .pair-help { flex-direction: column; max-width: 23em; }
     .pair-qr { width: min(48cqh, 36cqw, 240px); image-rendering: pixelated; }
     .pair-code { font: bold 1.35rem ui-monospace, monospace; letter-spacing: 0.08em; white-space: nowrap; }
-    .remote-page {
-      justify-content: center; align-items: center; text-align: center;
-      gap: clamp(4px, 1.5vmin, 12px);
-    }
-    .remote-status { color: var(--text-muted); }
-    .remote-problem { font-size: 2.6rem; line-height: 1.15; font-weight: bold; }
-    .remote-answer { font-size: 1.5rem; font-weight: bold; }
     .remote-actions .chip { min-width: 6em; min-height: 2.7em; }
-    .remote-actions .chip:disabled { opacity: 0.45; cursor: default; }
+    /* ---------- Remote: pairing form, then a full-screen controller ---------- */
+    .remote-page { text-align: center; }
+    .remote-pairing { justify-content: center; align-items: center; gap: clamp(8px, 2.5vmin, 18px); }
+    .remote-lead { font-size: 1.15rem; font-weight: bold; }
+    .remote-status { color: var(--text-muted); min-height: 1.3em; }
+    .remote-offline { color: var(--accent-pressed); font-weight: bold; }
+    .remote-notice { color: var(--accent-pressed); font-weight: bold; }
+    .remote-check { font-size: 2.4rem; }
+    .remote-code-field { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+    .remote-code-label { font-size: 0.9rem; color: var(--text-muted); font-weight: bold; }
     .remote-code-input {
-      font: inherit; font-size: max(16px, 1rem);
-      width: 12em; max-width: 56vw; text-align: center; color: var(--text);
-      background: var(--surface); padding: 0.4em; border: 2px solid var(--line); border-radius: 0.6em;
+      box-sizing: border-box; width: min(15em, 86vw); padding: 0.45em 0.6em;
+      font: bold max(16px, 1.6rem) ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: center; color: var(--text); background: var(--surface);
+      border: 3px solid var(--line-strong); border-radius: 0.7em;
+    }
+    .remote-code-input:focus { outline: none; border-color: var(--accent); }
+    .remote-code-input::placeholder { color: var(--line-strong); }
+
+    /* The controller takes the whole screen; the title header is hidden. */
+    .app:has(.remote-live) .app-header { display: none; }
+    .remote-live { gap: 1.5vmin; }
+    .remote-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 1.15rem; font-weight: bold; min-height: 2.2em; }
+    .remote-bar .progress-side:first-child { justify-content: flex-start; }
+    .remote-bar .clock {
+      padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface);
+      border: 2.5px solid var(--line); font-size: 1.3rem;
+    }
+    .remote-count { font-size: 1.3rem; }
+    .remote-stage {
+      flex: 1; min-height: 0; display: grid; gap: 2vmin;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr) minmax(0, 1.25fr);
+    }
+    .remote-stage-idle { grid-template-columns: 1fr; }
+    .remote-card {
+      min-width: 0; min-height: 0; container-type: size; box-sizing: border-box;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
+      border: calc(3px + 0.6vmin) solid var(--line-strong); border-radius: 1.2rem; background: var(--surface);
+      user-select: none; -webkit-user-select: none;
+    }
+    .remote-problem {
+      font-size: min(24cqh, 17cqw); font-weight: bold; line-height: 1.1;
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .remote-answer {
+      display: flex; align-items: center; gap: 0.35em; padding: 0.1em 0.6em 0.1em 0.5em;
+      border-radius: 999px; background: var(--accent-soft); color: var(--accent-pressed);
+    }
+    .remote-answer-label { font-size: min(9cqh, 7cqw); font-weight: bold; }
+    .remote-answer-value { font-size: min(26cqh, 19cqw); font-weight: bold; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .remote-message { font-size: min(14cqh, 9cqw); font-weight: bold; padding-inline: 0.5em; }
+    .remote-final-time { font-size: min(20cqh, 12cqw); font-weight: bold; color: var(--accent); }
+    .remote-move {
+      min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.2em; padding: 0.4em; border-radius: 1.2rem; font-weight: bold; container-type: size;
+      user-select: none; -webkit-user-select: none; touch-action: manipulation;
+      transition: background-color 0.1s, transform 0.1s;
+    }
+    .remote-move-arrow { font-size: min(34cqh, 48cqw); line-height: 1; }
+    .remote-move-label { font-size: min(14cqh, 22cqw); }
+    .remote-previous { border: 3px solid var(--line-strong); background: var(--surface); color: var(--text); }
+    .remote-previous:active:not(:disabled) { background: var(--surface-pressed); transform: scale(0.97); }
+    .remote-next { border: 3px solid var(--accent); background: var(--accent); color: #fff; }
+    .remote-next:active:not(:disabled) { background: var(--accent-pressed); transform: scale(0.97); }
+    .remote-move:disabled { opacity: 0.4; cursor: default; }
+    .remote-footer { display: flex; align-items: center; justify-content: center; gap: 0.6em; min-height: 1.6em; font-size: 0.95rem; }
+    @media (orientation: portrait) {
+      .remote-stage {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 0.55fr);
+      }
+      .remote-stage-idle { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+      .remote-stage .remote-card { grid-column: 1 / -1; grid-row: 1; }
+      .remote-stage .remote-previous { grid-column: 1; grid-row: 2; }
+      .remote-stage .remote-next { grid-column: 2; grid-row: 2; }
     }
     @media (orientation: portrait) {
       .pair-invite { flex-direction: column; }
