@@ -72,9 +72,12 @@ swift test
 pnpm exec cf build --mode staging
 pnpm exec node Scripts/check-build.mjs staging
 pnpm exec cf deploy --prebuilt --mode staging --dry-run
+pnpm run test:worker
 pnpm exec playwright install chromium
 pnpm exec playwright test
 ```
+
+`pnpm run test:worker` は Durable Object を workerd なしで直接動かし、コード衝突と alarm の再実行を確かめます（`cf build` が作る `worker/generated/logic.wasm` が必要）。
 
 作業ブランチと PR の CI はテストと dry run を行います。ステージングへの公開は `staging` ブランチだけが対象で、`CLOUDFLARE_STAGING_API_TOKEN` を使います。本番への公開は `main` だけが対象です。
 
