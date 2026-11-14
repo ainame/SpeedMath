@@ -1,5 +1,5 @@
 {
-  "originHash" : "5b80bcb4bdc8433d6e311ab56e7c071d63e263fd3efcd34387e2e89733472634",
+  "originHash" : "a0cd394525568ca2e75f137a75d14423c55f33ac27bb9bfad1f52ef537901f12",
   "pins" : [
     {
       "identity" : "elementary",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "71521f6f710b523d572293b90646ea12befa5b9f",
         "version" : "0.9.0"
+      }
+    },
+    {
+      "identity" : "elementary-router",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ainame/elementary-router.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "9cd4960dfdb0407aff81f35e122bdbf402833b9b"
       }
     },
     {

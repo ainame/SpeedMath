@@ -7,8 +7,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
-      position: relative;
+      margin: 0;
+      font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
+      background: #fffbea;
+      color: #333;
     }
+    a { color: inherit; text-decoration: none; }
+    .app { max-width: 640px; margin: 0 auto; padding: 16px; }
+    .app-header h1 { margin: 0 0 16px; font-size: 1.8rem; text-align: center; }
+    .lead { font-size: 1.3rem; text-align: center; }
+    .operation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .operation-grid a {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 24px 8px; border-radius: 16px; background: #fff;
+      box-shadow: 0 4px 0 #e0c97a; font-size: 1.3rem; font-weight: bold;
+    }
+    .operation-grid a:active { transform: translateY(2px); box-shadow: 0 2px 0 #e0c97a; }
+    .operation-symbol { font-size: 2.5rem; }
   </style>
 </head>
 
