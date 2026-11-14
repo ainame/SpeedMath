@@ -6,3 +6,8 @@ node_modules
 .wrangler
 
 .cloudflare
+
+worker/generated/
+
+/test-results/
+/playwright-report/
