@@ -122,5 +122,13 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
     await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
     await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
+    const remoteLink = page.getByRole("link", { name: "リモコン" });
+    await expect(remoteLink).toBeVisible();
+    const [linkBox, titleBox] = await Promise.all([
+      remoteLink.boundingBox(), page.getByRole("heading", { name: "スピードけいさん" }).boundingBox(),
+    ]);
+    expect(linkBox.x + linkBox.width).toBeLessThan(titleBox.x);
+    await remoteLink.click();
+    await expect(page.getByRole("textbox", { name: "コード" })).toBeVisible();
   });
 }

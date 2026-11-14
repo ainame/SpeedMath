@@ -14,7 +14,6 @@ struct HomePage {
     section(.class("home")) {
       if let routes {
         div(.class("home-links")) {
-          AppRoutes.Link(to: routes.remote()) { "リモコン" }
           AppRoutes.Link(to: routes.records()) { "きろく" }
           AppRoutes.Link(to: routes.stamps()) {
             "スタンプ \(stampBook.stamps.count)/\(Stamp.allCases.count)"
