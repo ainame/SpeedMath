@@ -3,7 +3,9 @@ import { VERSION, frame, normalizeCode, relayKind, sessionPattern, tokenPattern 
 
 const packet = (type, fields = {}) => ({ v: VERSION, type, ...fields });
 const id = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join("");
-const inviteFromURL = (() => {
+// Reads a QR invite from the URL and removes it from history. iOS Safari may deliver a scanned link
+// to an already open tab as a same-document hash change, so this runs on load and on hashchange.
+function takeInvite() {
   const [path, query] = location.hash.split("?", 2);
   if (path !== "#/remote" || !query) return null;
   const params = new URLSearchParams(query);
@@ -12,8 +14,16 @@ const inviteFromURL = (() => {
   history.replaceState(history.state, "", location.pathname + location.search + "#/remote");
   return secret.length === 3 && sessionPattern.test(secret[0]) && sessionPattern.test(secret[1]) &&
     tokenPattern.test(secret[2]) ? { id: secret[0], generation: secret[1], key: secret[2] } : null;
-})();
-let qrInvite = inviteFromURL;
+}
+let qrInvite = takeInvite();
+let activeRemote = null;
+window.addEventListener("hashchange", () => {
+  const invite = takeInvite();
+  if (!invite) return;
+  qrInvite = invite;
+  // A Remote screen that is already mounted joins now; otherwise the next one picks it up.
+  activeRemote?.joinInvite();
+});
 const presenterStore = "speedmath.presenter.v1";
 let reloadSession = (() => {
   try {
@@ -72,12 +82,27 @@ class Link {
       this.update({ started: true, status: "つないでいます…" });
       this.connect();
     }
-    if (role === 2 && qrInvite) {
-      this.session = qrInvite;
-      qrInvite = null;
-      this.update({ status: "つないでいます…", joining: true });
-      this.connect();
+    if (role === 2) {
+      activeRemote = this;
+      this.joinInvite();
     }
+  }
+
+  joinInvite() {
+    if (this.disposed || this.role !== 2 || !qrInvite) return;
+    const invite = qrInvite;
+    qrInvite = null;
+    // A scanned invite replaces a half-finished code join, but never an approved pairing.
+    if (this.session?.key && !this.session.generation) return;
+    this.inFlight?.abort();
+    if (this.socket) {
+      const socket = this.socket;
+      this.resetConnection();
+      socket.close();
+    }
+    this.session = invite;
+    this.update({ status: "つないでいます…", joining: true, check: null });
+    this.connect();
   }
 
   update(fields) {
@@ -119,6 +144,7 @@ class Link {
       }
       this.connect();
     } catch (error) {
+      if (this.session) return; // A scanned invite took over while the lookup was running.
       this.update({ joining: false, status: error.message === "slow" ? "すこし まってから ためしてね" : issueText });
     } finally {
       clearTimeout(timeout);
@@ -366,6 +392,7 @@ class Link {
     document.removeEventListener("visibilitychange", this.visible);
     window.removeEventListener("online", this.visible);
     window.removeEventListener("offline", this.offline);
+    if (activeRemote === this) activeRemote = null;
     this.presenterEvent = null;
     this.render = null;
   }

@@ -96,6 +96,39 @@ test("decode the displayed QR, strip invite, reload Presenter, and revoke", asyn
   } finally { await context.close(); }
 });
 
+test("a QR scanned into an already open Remote tab joins without reloading", async ({ page, browser }) => {
+  const context = await browser.newContext();
+  const remote = await context.newPage();
+  try {
+    await presenter(page, 2);
+    const png = PNG.sync.read(await page.locator(".pair-qr").screenshot());
+    const link = new URL(jsQR(new Uint8ClampedArray(png.data), png.width, png.height).data);
+    // The Remote tab is open on the code form with a half-typed code, as when iOS reuses a tab.
+    await remote.goto("/#/remote");
+    await remote.getByRole("textbox", { name: "コード" }).fill("ABCD");
+    await remote.evaluate(() => { window.sameDocument = true; });
+    await remote.evaluate(hash => { location.hash = hash; }, link.hash);
+    await approve(page, remote);
+    expect(await remote.evaluate(() => window.sameDocument)).toBe(true);
+    await expect(remote).toHaveURL(/#\/remote$/);
+    await page.keyboard.press("Space");
+    await expect(remote.locator(".remote-count")).toHaveText("1 / 2");
+
+    // From another screen of the app, the same kind of navigation opens the Remote and joins.
+    await page.getByRole("button", { name: "リモコン" }).click();
+    await page.getByRole("button", { name: "リモコンを はずす" }).click();
+    await page.getByRole("button", { name: "コードを だす" }).click();
+    await expect(page.locator(".pair-qr")).toBeVisible();
+    const png2 = PNG.sync.read(await page.locator(".pair-qr").screenshot());
+    const link2 = new URL(jsQR(new Uint8ClampedArray(png2.data), png2.width, png2.height).data);
+    await remote.evaluate(() => { location.hash = "#/"; });
+    await expect(remote.getByRole("link", { name: "リモコン" })).toBeVisible();
+    await remote.evaluate(hash => { location.hash = hash; }, link2.hash);
+    await approve(page, remote);
+    expect(await remote.evaluate(() => window.sameDocument)).toBe(true);
+  } finally { await context.close(); }
+});
+
 for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]]) {
   test(`local play, safe area and layout at ${width}×${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
