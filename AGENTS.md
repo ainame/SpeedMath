@@ -36,6 +36,7 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 
 - App-style full screen: the page never scrolls. Every screen fills the viewport and splits it into regions with flex ratios. Only inner lists (records) may scroll.
 - Sizes are proportional: root font size follows `vmin`; cards, stamps, deck text and stamp slots size from their region with container query units. Container units resolve against an ancestor container, so set `container-type` on the parent of the element that uses `cq*` units.
+- The app is used as a home-screen web app: respect safe-area insets through the `--safe-*` variables in `index.html` (they wrap `env(safe-area-inset-*)`). Setting them on `document.documentElement` in the browser simulates a notch and home indicator for testing.
 - Primary target is a phone in landscape (tap left/right half of the screen to go back/forward); portrait phones and desktop must still fit without scrolling. Check at least 812×375, 667×320, 375×812 and a desktop window.
 - Use the theme variables in `index.html` (`--bg`, `--surface`, `--line`, `--accent`, ...) instead of new hard-coded colors. The four deck colors (`.deck-red` etc.) and the stamp ink are fixed.
 - Keep the look simple and kid-friendly: outlined, rounded components (radio-card style selection, outlined list items). Avoid colored edge accents (thick left/bottom highlight bars) and hard drop shadows under buttons.
