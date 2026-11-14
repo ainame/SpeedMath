@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
       compatibilityDate: "2026-11-14",
       entrypoint: "./worker/index.js",
       workersDev: true,
+      previewUrls: false,
       assets: { notFoundHandling: "single-page-application", runWorkerFirst: ["/api/*"] },
       exports: {
         SessionObject: exports.durableObject({ storage: "sqlite" }),

@@ -54,7 +54,13 @@ class Link {
       if (this.socket?.readyState === WebSocket.OPEN && this.authenticated) this.probe();
       else if (!this.inFlight) this.retry();
     };
-    this.offline = () => this.socket?.close();
+    this.offline = () => {
+      this.update({ online: false, retry: !!this.session?.key && !this.session?.generation, status: disconnectedText });
+      // A closing handshake can stall on a lost network, so drop the socket immediately.
+      const socket = this.socket;
+      if (socket && !this.session?.generation) this.resetConnection();
+      socket?.close();
+    };
     document.addEventListener("visibilitychange", this.visible);
     window.addEventListener("online", this.visible);
     window.addEventListener("offline", this.offline);
@@ -140,13 +146,13 @@ class Link {
   revoke() { this.send("revoke"); }
 
   send(type, fields) {
-    if (!this.authenticated || this.socket?.readyState !== WebSocket.OPEN) return false;
+    if (!navigator.onLine || !this.authenticated || this.socket?.readyState !== WebSocket.OPEN) return false;
     this.socket.send(JSON.stringify(packet(type, fields)));
     return true;
   }
 
   connect() {
-    if (this.disposed || !this.session || this.socket) return;
+    if (this.disposed || !this.session || this.socket || !navigator.onLine) return;
     const session = this.session;
     const url = new URL("/api/socket/" + session.id, location.origin);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
