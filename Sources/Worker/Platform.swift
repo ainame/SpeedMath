@@ -3,7 +3,7 @@ import ProtocolModels
 import RemoteProtocol
 
 /// Workers runtime access. Untrusted values are always read optionally: a trap would kill the
-/// Wasm instance that the whole isolate shares. Every asynchronous call returns a `Deferred`.
+/// Wasm instance that the whole isolate shares.
 enum Platform {
   static func now() -> Double {
     guard let date = JS.global.Date.object else { return 0 }
@@ -56,18 +56,28 @@ enum Platform {
     return list(rows.jsValue)
   }
 
-  /// `ctx.storage.<method>(...)`, waited for (a failure is ignored, as the JS version did not catch it either).
-  static func storage(_ ctx: JSObject, _ method: String, _ arguments: JSValue...) -> Deferred<Void> {
+  /// `ctx.storage.<method>(...)`, awaited (a failure is ignored, as the JS version did not catch it either).
+  static func storage(_ ctx: JSObject, _ method: String, _ arguments: JSValue...) async {
     guard let storage = ctx.storage.object,
       let result = storage[method].function?.callAsFunction(this: storage, arguments: arguments)
-    else { return .value(()) }
-    return Deferred.promise(result).map { _ in () }
+    else { return }
+    _ = await resolve(result)
+  }
+
+  /// Awaits a JS value like JS `await`: any object goes through `Promise.resolve`, so thenables
+  /// that are not plain promises (Workers RPC results are lazy proxies) are awaited too.
+  /// A rejection becomes nil.
+  static func resolve(_ value: JSValue) async -> JSValue? {
+    guard value.object != nil, let promiseClass = JS.global.Promise.object,
+      let promise = JS.call(promiseClass, "resolve", value).object.flatMap(JSPromise.init)
+    else { return value }
+    return try? await promise.value
   }
 
   /// Hands best-effort work to `ctx.waitUntil` without waiting for it.
-  static func background(_ ctx: JSObject, _ value: JSValue) {
-    guard let promise = value.object, let derived = JSPromises.chain(promise, { _ in }, {}) else { return }
-    JS.call(ctx, "waitUntil", derived.jsValue)
+  static func background(_ ctx: JSObject, _ work: @escaping () async -> Void) {
+    let promise = JSPromise.async { () async throws(JSException) -> Void in await work() }
+    JS.call(ctx, "waitUntil", promise.jsValue)
   }
 
   // MARK: Durable Object stubs (RPC)
@@ -87,12 +97,12 @@ enum Platform {
   /// JavaScriptKit invokes functions as `fn.apply(this, args)`, but on a Workers RPC stub every
   /// property, `apply` included, names a remote method. `Reflect.apply` calls the function
   /// without reading that property.
-  static func rpc(_ stub: JSObject?, _ method: String, _ arguments: JSValue...) -> Deferred<JSValue?> {
-    guard let stub, let reflect = JS.global.Reflect.object, let list = JS.new("Array") else { return .value(nil) }
+  static func rpc(_ stub: JSObject?, _ method: String, _ arguments: JSValue...) async -> JSValue? {
+    guard let stub, let reflect = JS.global.Reflect.object, let list = JS.new("Array") else { return nil }
     let function = stub[method]
-    guard function.object != nil else { return .value(nil) }
+    guard function.object != nil else { return nil }
     for (i, argument) in arguments.enumerated() { list[i] = argument }
-    return Deferred.promise(JS.call(reflect, "apply", function, stub.jsValue, list.jsValue))
+    return await resolve(JS.call(reflect, "apply", function, stub.jsValue, list.jsValue))
   }
 
   // MARK: Values

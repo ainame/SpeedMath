@@ -37,8 +37,9 @@ struct SessionObject {
 
   /// `deleteAll` drops the SQLite table too, but this instance may still receive a duplicate
   /// alarm, a stale lookup or a reconnect before it is evicted, so the table is recreated.
-  private func erase() -> Deferred<Void> {
-    Platform.storage(ctx, "deleteAll").map { prepare() }
+  private func erase() async {
+    await Platform.storage(ctx, "deleteAll")
+    prepare()
   }
 
   private func live(_ state: SessionState?) -> Bool {
@@ -97,14 +98,15 @@ struct SessionObject {
     state.pending = nil
     state.invite = nil
     if let invite {
-      let release = Platform.rpc(
-        Platform.shard(ctx, invite.codeHash), "release",
-        invite.codeHash.jsValue, state.id.jsValue, invite.generation.jsValue)
-      Platform.background(ctx, release.map { _ in JSValue.undefined }.jsPromise)
+      let shard = Platform.shard(ctx, invite.codeHash)
+      let id = state.id
+      Platform.background(ctx) {
+        _ = await Platform.rpc(shard, "release", invite.codeHash.jsValue, id.jsValue, invite.generation.jsValue)
+      }
     }
   }
 
-  private func schedule(_ state: SessionState) -> Deferred<Void> {
+  private func schedule(_ state: SessionState) async {
     let now = Platform.now()
     var next = min(state.expires, state.presenter.until)
     if let remote = state.remote { next = min(next, remote.until) }
@@ -114,18 +116,18 @@ struct SessionObject {
         next = min(next, deadline)
       }
     }
-    return Platform.storage(ctx, "setAlarm", next.jsValue)
+    return await Platform.storage(ctx, "setAlarm", next.jsValue)
   }
 
   // MARK: RPC from the Worker
 
-  func create(id: String, hash: String) -> Deferred<Void> {
-    if load() != nil { return .value(()) }
+  func create(id: String, hash: String) async {
+    if load() != nil { return }
     let now = Platform.now()
     save(
       SessionState(
         id: id, expires: now + sessionLifetime, presenter: .init(hash: hash, until: now + reconnectWindow)))
-    return Platform.storage(ctx, "setAlarm", (now + reconnectWindow).jsValue)
+    return await Platform.storage(ctx, "setAlarm", (now + reconnectWindow).jsValue)
   }
 
   func validLookup(hash: String, generation: String) -> Bool {
@@ -136,22 +138,23 @@ struct SessionObject {
   }
 
   /// Accepts a WebSocket that must authenticate or join within `authWait`.
-  func connect() -> Deferred<JSValue> {
+  func connect() async -> JSValue {
     guard let state = load(), live(state), sockets.count < 8, let pair = JS.new("WebSocketPair"),
       let values = JS.global.Object.object.map({ JS.call($0, "values", pair.jsValue) }),
       let client = values[0].object, let server = values[1].object
-    else { return .value(Platform.invalid()) }
+    else { return (Platform.invalid()) }
     JS.call(ctx, "acceptWebSocket", server.jsValue)
     Attachment(id: JS.randomHex(bytes: 16), role: 0, deadline: Platform.now() + authWait).write(server)
-    return schedule(state).map { Platform.upgrade(client) }
+    await schedule(state)
+    return Platform.upgrade(client)
   }
 
   // MARK: Socket events
 
-  func message(_ ws: JSObject, _ text: JSValue) -> Deferred<Void> {
+  func message(_ ws: JSObject, _ text: JSValue) async {
     guard var a = Attachment.read(ws), var state = load(), live(state) else {
       close(ws)
-      return .value(())
+      return
     }
     let now = Platform.now()
     if now - (a.since ?? 0) >= 10_000 {
@@ -162,35 +165,35 @@ struct SessionObject {
     a.messages = count
     if count > (a.role != 0 ? 100 : 4) {
       close(ws, "slow")
-      return .value(())
+      return
     }
     a.write(ws)
     guard let message = RemoteWire.frame(text), let type = message.type.string else {
       close(ws)
-      return .value(())
+      return
     }
     if a.role == 0, !a.pending, let deadline = a.deadline, deadline > now,
       let raw = text.string, raw.utf8.count <= Wire.controlLimit
     {
-      if type == "auth" { return authenticate(ws, a, message) }
-      if type == "joinCode" || type == "joinQR" { return join(ws, a, message) }
+      if type == "auth" { return await authenticate(ws, a, message) }
+      if type == "joinCode" || type == "joinQR" { return await join(ws, a, message) }
     }
     guard a.role != 0, active(state, ws, a.role) else {
       close(ws)
-      return .value(())
+      return
     }
     if type == "ping" {
       send(ws, "pong")
-      return .value(())
+      return
     }
     if a.role == 1 {
       switch type {
       case "invite":
-        return invite(ws)
+        return await invite(ws)
       case "approve":
-        return approve(ws, message.request.string)
+        return await approve(ws, message.request.string)
       case "reject", "revoke", "end":
-        if type == "reject" && state.pending?.request != message.request.string { return .value(()) }
+        if type == "reject" && state.pending?.request != message.request.string { return }
         clearInvite(&state)
         state.issuing = nil
         if type != "reject" {
@@ -199,11 +202,11 @@ struct SessionObject {
         }
         if type == "end" {
           close(ws, "ended")
-          return erase()
+          return await erase()
         }
         save(state)
         send(ws, "reset")
-        return schedule(state)
+        return await schedule(state)
       default:
         break
       }
@@ -212,14 +215,14 @@ struct SessionObject {
       let role = Role(rawValue: Int32(a.role)), role.canRelay(kind)
     else {
       close(ws)
-      return .value(())
+      return
     }
     if let other = peer(state, a.role == 1 ? 2 : 1) {
       JS.call(other, "send", text)
     } else {
       send(ws, "peerDown")
     }
-    return .value(())
+    return
   }
 
   /// Only well-formed play messages are relayed, each in its role's direction.
@@ -233,12 +236,12 @@ struct SessionObject {
     }
   }
 
-  private func authenticate(_ ws: JSObject, _ a: Attachment, _ message: JSObject) -> Deferred<Void> {
+  private func authenticate(_ ws: JSObject, _ a: Attachment, _ message: JSObject) async {
     guard let rawRole = message.role.number, rawRole == 1 || rawRole == 2,
       let key = message.key.string, Wire.isKey(key)
     else {
       close(ws)
-      return .value(())
+      return
     }
     let role = Int(rawRole)
     guard var state = load(), live(state), let deadline = a.deadline, deadline > Platform.now(), isOpen(ws),
@@ -247,7 +250,7 @@ struct SessionObject {
       SHA256.matches(Platform.credential(state.id, role, key), principal.hash)
     else {
       close(ws)
-      return .value(())
+      return
     }
     let other = role == 1 ? 2 : 1
     let old = peer(state, role)
@@ -266,44 +269,34 @@ struct SessionObject {
     if role == 1, let pending = state.pending { send(ws, "pending", display: pending) }
     if role == 1, state.invite != nil, state.pending == nil { send(ws, "inviteMissing") }
     if role == 2 || wasDisconnected || old != nil { send(peer(state, other), "peerUp") }
-    return schedule(state)
+    return await schedule(state)
   }
 
   /// Issues a new invite generation: a typed code (reserved in the code index) and a QR key.
-  private func invite(_ ws: JSObject) -> Deferred<Void> {
-    guard var state = load(), live(state), active(state, ws, 1) else { return .value(()) }
-    if let remote = state.remote, remote.until > Platform.now() { return .value(()) }
+  private func invite(_ ws: JSObject) async {
+    guard var state = load(), live(state), active(state, ws, 1) else { return }
+    if let remote = state.remote, remote.until > Platform.now() { return }
     clearInvite(&state)
     let attempt = JS.randomHex(bytes: 16)
     state.issuing = attempt
     state.remote = nil
     save(state)
-    return reserveInvite(ws, sessionID: state.id, attempt: attempt, tries: 5)
-  }
-
-  /// The retry loop of `invite`: draws a code until the index accepts one (`for _ in 0..<5`).
-  private func reserveInvite(_ ws: JSObject, sessionID: String, attempt: String, tries: Int) -> Deferred<Void> {
-    guard tries > 0 else {
-      send(ws, "inviteMissing")
-      return .value(())
-    }
-    let code = randomCode()
-    let key = JS.randomHex(bytes: 32)
-    let codeHash = SHA256.hex(code)
-    let inviteHash = SHA256.hex(key)
-    let index = Platform.shard(ctx, codeHash)
-    let expires = Platform.now() + inviteLifetime
-    return Platform.rpc(
-      index, "reserve", codeHash.jsValue, sessionID.jsValue, attempt.jsValue, expires.jsValue
-    ).then { reserved -> Deferred<Void> in
-      guard reserved?.boolean == true else {
-        return reserveInvite(ws, sessionID: sessionID, attempt: attempt, tries: tries - 1)
-      }
+    for _ in 0..<5 {
+      let code = randomCode()
+      let key = JS.randomHex(bytes: 32)
+      let codeHash = SHA256.hex(code)
+      let inviteHash = SHA256.hex(key)
+      let index = Platform.shard(ctx, codeHash)
+      let expires = Platform.now() + inviteLifetime
+      let reserved = await Platform.rpc(
+        index, "reserve", codeHash.jsValue, state.id.jsValue, attempt.jsValue, expires.jsValue)
+      guard reserved?.boolean == true else { continue }
       // Another event may have run while the index answered: re-check before using the code.
       guard var latest = load(), live(latest), active(latest, ws, 1), latest.issuing == attempt,
         expires > Platform.now()
       else {
-        return Platform.rpc(index, "release", codeHash.jsValue, sessionID.jsValue, attempt.jsValue).map { _ in () }
+        _ = await Platform.rpc(index, "release", codeHash.jsValue, state.id.jsValue, attempt.jsValue)
+        return
       }
       latest.invite = .init(
         generation: attempt, expires: expires, codeHash: codeHash, inviteHash: inviteHash, failures: 0)
@@ -315,8 +308,9 @@ struct SessionObject {
         $0["key"] = key.jsValue
         $0["expires"] = expires.jsValue
       }
-      return schedule(latest)
+      return await schedule(latest)
     }
+    send(ws, "inviteMissing")
   }
 
   private func randomCode() -> String {
@@ -331,13 +325,13 @@ struct SessionObject {
 
   private func hexValue(_ c: UInt8) -> UInt8 { c <= 0x39 ? c - 0x30 : c - 0x61 + 10 }
 
-  private func join(_ ws: JSObject, _ a: Attachment, _ message: JSObject) -> Deferred<Void> {
+  private func join(_ ws: JSObject, _ a: Attachment, _ message: JSObject) async {
     let isCode = message.type.string == "joinCode"
     let code = isCode ? message.key.string.flatMap(Wire.normalizeCode) : nil
     let key: String? = isCode ? code : message.key.string.flatMap { Wire.isKey($0) ? $0 : nil }
     guard let key, let generation = message.generation.string, Wire.isID(generation) else {
       close(ws)
-      return .value(())
+      return
     }
     let hash = SHA256.hex(key)
     guard var state = load(), live(state), let deadline = a.deadline, deadline > Platform.now(), isOpen(ws),
@@ -345,7 +339,7 @@ struct SessionObject {
       validInvite(state, generation), var invite = state.invite
     else {
       close(ws)
-      return .value(())
+      return
     }
     guard SHA256.matches(hash, code != nil ? invite.codeHash : invite.inviteHash) else {
       invite.failures += 1
@@ -356,11 +350,11 @@ struct SessionObject {
       }
       save(state)
       close(ws)
-      return .value(())
+      return
     }
     if state.remote != nil || pendingSocket(state) != nil || peer(state, 1) == nil {
       close(ws)
-      return .value(())
+      return
     }
     let pending = SessionState.Pending(
       socket: a.id, request: JS.randomHex(bytes: 16), check: upper(JS.randomHex(bytes: 3)))
@@ -371,18 +365,18 @@ struct SessionObject {
     waiting.write(ws)
     send(ws, "waiting", display: pending)
     send(peer(state, 1), "pending", display: pending)
-    return schedule(state)
+    return await schedule(state)
   }
 
   private func upper(_ hex: String) -> String {
     String(decoding: hex.utf8.map { $0 >= 0x61 && $0 <= 0x7A ? $0 - 0x20 : $0 }, as: UTF8.self)
   }
 
-  private func approve(_ ws: JSObject, _ request: String?) -> Deferred<Void> {
+  private func approve(_ ws: JSObject, _ request: String?) async {
     guard var state = load(), live(state), active(state, ws, 1), let pending = state.pending,
       pending.request == request, validInvite(state, state.invite?.generation),
       let remote = pendingSocket(state)
-    else { return .value(()) }
+    else { return }
     let key = JS.randomHex(bytes: 32)
     let hash = Platform.credential(state.id, 2, key)
     state.pending = nil  // Clear the invite without closing the approved socket.
@@ -392,32 +386,32 @@ struct SessionObject {
     Attachment(id: pending.socket, role: 2).write(remote)
     send(remote, "approved") { $0["key"] = key.jsValue }
     send(ws, "peerUp")
-    return schedule(state)
+    return await schedule(state)
   }
 
-  func closed(_ ws: JSObject) -> Deferred<Void> {
-    guard let a = Attachment.read(ws), var state = load(), live(state) else { return .value(()) }
+  func closed(_ ws: JSObject) async {
+    guard let a = Attachment.read(ws), var state = load(), live(state) else { return }
     if a.pending, a.id == state.pending?.socket {
       state.pending = nil
       save(state)
       send(peer(state, 1), "pendingGone")
     }
-    guard var principal = state.principal(a.role), principal.socket == a.id else { return .value(()) }
+    guard var principal = state.principal(a.role), principal.socket == a.id else { return }
     principal.socket = nil
     principal.until = min(state.expires, Platform.now() + reconnectWindow)
     state.setPrincipal(a.role, principal)
     save(state)
     send(peer(state, a.role == 1 ? 2 : 1), "peerDown")
-    return schedule(state)
+    return await schedule(state)
   }
 
   /// Expires invites, reconnect windows and unauthenticated sockets; ends the session at its
   /// deadline. Safe to run again after a delay, a duplicate or a retry.
-  func alarm() -> Deferred<Void> {
+  func alarm() async {
     guard var state = load(), live(state) else {
       if var stale = load() { clearInvite(&stale) }
       for ws in sockets { close(ws, "ended") }
-      return erase()
+      return await erase()
     }
     let now = Platform.now()
     if let invite = state.invite, invite.expires <= now {
@@ -435,6 +429,6 @@ struct SessionObject {
       }
     }
     save(state)
-    return schedule(state)
+    return await schedule(state)
   }
 }

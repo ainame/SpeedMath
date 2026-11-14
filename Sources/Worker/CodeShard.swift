@@ -10,9 +10,7 @@ enum CodeShard {
   }
 
   /// Reserves `hash` for one session unless another live reservation holds it.
-  static func reserve(_ ctx: JSObject, hash: String, id: String, generation: String, expires: Double)
-    -> Deferred<Bool>
-  {
+  static func reserve(_ ctx: JSObject, hash: String, id: String, generation: String, expires: Double) async -> Bool {
     prepare(ctx)
     _ = Platform.exec(ctx, "DELETE FROM codes WHERE expires <= ?", Platform.now().jsValue)
     let reserved =
@@ -20,7 +18,8 @@ enum CodeShard {
         ctx, "INSERT OR IGNORE INTO codes VALUES (?, ?, ?, ?) RETURNING hash",
         hash.jsValue, id.jsValue, generation.jsValue, expires.jsValue
       ).count == 1
-    return schedule(ctx).map { reserved }
+    await schedule(ctx)
+    return reserved
   }
 
   static func lookup(_ ctx: JSObject, hash: String) -> JSValue {
@@ -31,24 +30,24 @@ enum CodeShard {
   }
 
   /// Removes the row only if it still belongs to this session and generation.
-  static func release(_ ctx: JSObject, hash: String, id: String, generation: String) -> Deferred<Void> {
+  static func release(_ ctx: JSObject, hash: String, id: String, generation: String) async {
     prepare(ctx)
     _ = Platform.exec(
       ctx, "DELETE FROM codes WHERE hash = ? AND id = ? AND generation = ?",
       hash.jsValue, id.jsValue, generation.jsValue)
-    return schedule(ctx)
+    return await schedule(ctx)
   }
 
-  static func alarm(_ ctx: JSObject) -> Deferred<Void> {
+  static func alarm(_ ctx: JSObject) async {
     prepare(ctx)
     _ = Platform.exec(ctx, "DELETE FROM codes WHERE expires <= ?", Platform.now().jsValue)
-    return schedule(ctx)
+    return await schedule(ctx)
   }
 
-  private static func schedule(_ ctx: JSObject) -> Deferred<Void> {
+  private static func schedule(_ ctx: JSObject) async {
     if let next = Platform.exec(ctx, "SELECT min(expires) AS expires FROM codes").first?.expires.number {
-      return Platform.storage(ctx, "setAlarm", next.jsValue)
+      return await Platform.storage(ctx, "setAlarm", next.jsValue)
     }
-    return Platform.storage(ctx, "deleteAlarm")
+    return await Platform.storage(ctx, "deleteAlarm")
   }
 }
