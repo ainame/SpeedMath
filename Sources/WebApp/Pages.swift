@@ -92,6 +92,7 @@ struct DeckButton {
       span(.class("deck-title")) { deck.title }
       span(.class("deck-subtitle")) { deck.subtitle }
       span(.class("deck-size")) { "\(size)まい" }
+      span(.class("deck-check")) {}
     }
     .onClick { onSelect() }
   }
@@ -406,23 +407,22 @@ struct RecordsPage {
   }
 }
 
+/// Material-style list item: a leading avatar with the operator, a headline with supporting text,
+/// and the elapsed time as the trailing value.
 @View
 struct RecordRow {
   let record: PlayRecord
 
   var body: some View {
     div(.class("record-row \(record.deck.colorClass)")) {
-      span(.class("record-at")) { record.finishedAt }
-      span(.class("record-deck")) {
-        span(.class("record-deck-title")) { record.deck.title }
-        span(.class("record-deck-subtitle")) { record.deck.subtitle }
-      }
-      span(.class("record-count")) { "\(record.count)まい" }
-      span(.class(record.includeZero ? "record-zero" : "record-zero off")) {
-        record.includeZero ? "0あり" : "0なし"
+      span(.class("record-avatar")) { record.deck.symbol }
+      div(.class("record-text")) {
+        p(.class("record-headline")) { "\(record.deck.title)（\(record.deck.subtitle)）" }
+        p(.class("record-supporting")) {
+          "\(record.count)まい ・ \(record.includeZero ? "0あり" : "0なし") ・ \(record.finishedAt)"
+        }
       }
       ClockDisplay(milliseconds: Double(record.milliseconds))
     }
   }
 }
-

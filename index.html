@@ -53,15 +53,23 @@
     .home-start { flex: 2; min-height: 0; display: flex; align-items: center; justify-content: center; }
     .step { font-size: 1rem; line-height: 1.3; margin-bottom: 0.4em; }
     .deck-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 2vmin; padding-bottom: 4px; }
+    /* Radio-card selection: outlined cards; the selected one gets its color border, a tint and a check. */
     .deck {
-      min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
-      padding: 0.3em; border: none; border-radius: 0.7em; background: var(--deck-soft);
-      transition: background-color 0.15s, color 0.15s;
+      position: relative; min-height: 0; container-type: size;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
+      padding: 0.3em; border: 3px solid #f0e2b6; border-radius: 1.2em; background: #fff;
+      transition: border-color 0.15s, background-color 0.15s;
     }
-    /* Selected deck is filled with its color, like a pressed toggle. */
-    .deck.selected { background: var(--deck); color: #fff; }
-    .deck.selected .deck-title { color: #fff; }
-    .deck.selected .deck-size { opacity: 0.85; }
+    .deck.selected { border-color: var(--deck); background: var(--deck-soft); box-shadow: 0 0 0 1px var(--deck); }
+    .deck-check {
+      display: none; position: absolute; top: 8cqh; right: 7cqh; width: 1.3em; height: 1.3em;
+      border-radius: 50%; background: var(--deck);
+    }
+    .deck-check::after {
+      content: ""; position: absolute; left: 50%; top: 45%; width: 0.28em; height: 0.55em;
+      border: solid #fff; border-width: 0 0.14em 0.14em 0; transform: translate(-50%, -50%) rotate(45deg);
+    }
+    .deck.selected .deck-check { display: block; }
     /* Deck text scales with the deck button itself. */
     .deck-title { font-size: clamp(0.9rem, min(24cqh, 21cqw), 2.4rem); font-weight: bold; color: var(--deck); line-height: 1.1; }
     .deck-subtitle { font-size: clamp(0.7rem, min(12cqh, 12cqw), 1.3rem); font-weight: bold; }
@@ -176,26 +184,24 @@
     .records { text-align: center; gap: 1.5vmin; }
     .records-title { font-size: 1.2rem; }
     .records-list {
-      flex: 1; min-height: 0; box-sizing: border-box; width: min(100%, 34em); align-self: center;
+      flex: 1; min-height: 0; box-sizing: border-box; width: min(100%, 30em); align-self: center;
       overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y;
-      display: flex; flex-direction: column; padding: 0 1em;
-      border-radius: 0.8em; background: #fff;
+      display: flex; flex-direction: column; gap: 0.5em; padding: 2px;
     }
     .records-empty { margin: auto; font-weight: bold; opacity: 0.7; }
-    /* A plain list: rows separated by thin lines; the deck is told apart by its colored name. */
+    /* Outlined list items (Material 3 anatomy): leading avatar, headline + supporting text, trailing value. */
     .record-row {
-      flex: none; display: grid; grid-template-columns: 3em 1fr 3.4em 3.4em 5em; align-items: center; gap: 0.6em;
-      padding: 0.6em 0; border-bottom: 1px solid #efe6c8; text-align: left;
+      flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.8em;
+      padding: 0.55em 1em 0.55em 0.6em; border: 2.5px solid #f0e2b6; border-radius: 1.4em; background: #fff; text-align: left;
     }
-    .record-row:last-child { border-bottom: none; }
-    .record-at { font-size: 0.85rem; opacity: 0.55; font-variant-numeric: tabular-nums; }
-    .record-deck { display: flex; align-items: baseline; gap: 0.5em; min-width: 0; }
-    .record-deck-title { color: var(--deck); font-size: 1.05rem; font-weight: bold; }
-    .record-deck-subtitle { font-size: 0.85rem; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .record-count { font-size: 0.95rem; text-align: right; }
-    .record-zero { font-size: 0.85rem; text-align: center; opacity: 0.8; }
-    .record-zero.off { opacity: 0.45; }
-    .record-row .clock { font-size: 1.1rem; font-weight: bold; justify-content: flex-end; }
+    .record-avatar {
+      width: 2em; height: 2em; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: var(--deck); color: #fff; font-size: 1.4rem; font-weight: bold; line-height: 1;
+    }
+    .record-text { min-width: 0; display: flex; flex-direction: column; gap: 0.15em; }
+    .record-headline { font-weight: bold; color: var(--deck); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-supporting { font-size: 0.85rem; opacity: 0.65; font-variant-numeric: tabular-nums; }
+    .record-row .clock { font-size: 1.3rem; font-weight: bold; color: #ff8a3d; }
     .records-summary { font-weight: bold; min-height: 1.2em; }
 
     .not-found { align-items: center; justify-content: center; gap: 1em; }
@@ -219,9 +225,6 @@
       .deck-grid { grid-template-columns: repeat(2, 1fr); }
       .finished { flex-direction: column; gap: 2cqh; }
       .stamp { height: min(45cqh, 70cqw); }
-      .record-row { grid-template-columns: 1fr 3.4em 5em; row-gap: 0.2em; }
-      .record-at { grid-column: 1 / -1; }
-      .record-deck { grid-column: 1 / -1; }
     }
   </style>
 </head>

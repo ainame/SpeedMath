@@ -64,6 +64,13 @@ enum Deck: String, CaseIterable, RouteValue {
     }
   }
 
+  var symbol: String {
+    switch self {
+    case .additionNoCarry, .additionCarry: "+"
+    case .subtractionNoBorrow, .subtractionBorrow: "−"
+    }
+  }
+
   /// CSS class carrying the deck's card color.
   var colorClass: String {
     switch self {
