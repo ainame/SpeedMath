@@ -24,15 +24,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Install binaryen (wasm-opt)
-        run: apt-get update && apt-get install -y binaryen
+      - name: Install binaryen (wasm-opt) and curl
+        run: apt-get update && apt-get install -y binaryen curl
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: "npm"
+      # `swift sdk install <url>` crashes in its downloader inside the container, so download the
+      # bundle with curl, verify it, and install from the local file.
       - name: Install Swift WASM SDK
-        run: swift sdk install "$WASM_SDK_URL" --checksum "$WASM_SDK_CHECKSUM"
+        run: |
+          curl -fsSL -o /tmp/wasm-sdk.artifactbundle.tar.gz "$WASM_SDK_URL"
+          echo "$WASM_SDK_CHECKSUM  /tmp/wasm-sdk.artifactbundle.tar.gz" | sha256sum -c -
+          swift sdk install /tmp/wasm-sdk.artifactbundle.tar.gz
+          swift sdk list
       - name: Install dependencies
         run: swift package resolve && npm ci
       - name: Build
