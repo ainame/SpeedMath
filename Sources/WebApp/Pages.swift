@@ -11,7 +11,11 @@ struct HomePage {
       h2(.class("step")) { "1. カードを えらぼう" }
       div(.class("deck-grid")) {
         for deck in Deck.allCases {
-          DeckButton(deck: deck, isSelected: settings.deck == deck) { settings.deck = deck }
+          DeckButton(
+            deck: deck,
+            size: deck.cards(includeZero: settings.includeZero).count,
+            isSelected: settings.deck == deck
+          ) { settings.deck = deck }
         }
       }
 
@@ -20,12 +24,12 @@ struct HomePage {
           h2(.class("step")) { "2. なんまい やる？" }
           div(.class("chips")) {
             // 45 is offered only for decks larger than that; on the 36-card decks it equals "all".
-            if settings.deck.cards.count > 45 {
+            if settings.deckSize > 45 {
               Chip(label: "45まい", isSelected: settings.count == 45) { settings.count = 45 }
             }
             Chip(
-              label: "ぜんぶ（\(settings.deck.cards.count)まい）",
-              isSelected: settings.count <= 0 || settings.count >= settings.deck.cards.count
+              label: "ぜんぶ（\(settings.deckSize)まい）",
+              isSelected: settings.count <= 0 || settings.count >= settings.deckSize
             ) { settings.count = 0 }
           }
         }
@@ -36,6 +40,13 @@ struct HomePage {
             Chip(label: "かくす", isSelected: !settings.showTimer) { settings.showTimer = false }
           }
         }
+        div {
+          h2(.class("step")) { "4. 0の けいさん" }
+          div(.class("chips")) {
+            Chip(label: "いれない", isSelected: !settings.includeZero) { settings.includeZero = false }
+            Chip(label: "いれる", isSelected: settings.includeZero) { settings.includeZero = true }
+          }
+        }
       }
 
       div(.class("start")) {
@@ -43,7 +54,8 @@ struct HomePage {
           let destination = try? routes.play(
             deck: settings.deck,
             count: settings.count,
-            timer: settings.showTimer
+            timer: settings.showTimer,
+            zero: settings.includeZero
           )
         {
           AppRoutes.Link(to: destination) { "スタート！" }
@@ -56,6 +68,7 @@ struct HomePage {
 @View
 struct DeckButton {
   let deck: Deck
+  let size: Int
   let isSelected: Bool
   let onSelect: () -> Void
 
@@ -63,7 +76,7 @@ struct DeckButton {
     button(.type(.button), .class("deck \(deck.colorClass)\(isSelected ? " selected" : "")")) {
       span(.class("deck-title")) { deck.title }
       span(.class("deck-subtitle")) { deck.subtitle }
-      span(.class("deck-size")) { "\(deck.cards.count)まい" }
+      span(.class("deck-size")) { "\(size)まい" }
     }
     .onClick { onSelect() }
   }
@@ -86,12 +99,13 @@ struct PlayPage {
   let deck: Deck
   let count: Int
   let showTimer: Bool
+  let includeZero: Bool
 
   var body: some View {
     // Keyed by the route values so a new deck/count/timer setting starts a fresh session, with
     // fresh state and a key listener that sees the new values.
-    PlaySession(deck: deck, count: count, showTimer: showTimer)
-      .id("\(deck.rawValue)/\(count)/\(showTimer)")
+    PlaySession(deck: deck, count: count, showTimer: showTimer, includeZero: includeZero)
+      .id("\(deck.rawValue)/\(count)/\(showTimer)/\(includeZero)")
   }
 }
 
@@ -108,6 +122,7 @@ struct PlaySession {
   let deck: Deck
   let count: Int
   let showTimer: Bool
+  let includeZero: Bool
 
   @State var phase: Phase = .ready
   @State var cards: [Card] = []
@@ -147,15 +162,16 @@ struct PlaySession {
           div(.class("card-area")) {
             div(.class("card \(deck.colorClass)")) {
               cards[index].question
+              if index > 0 {
+                span(.class("card-arrow card-arrow-previous")) {}
+              }
+              span(.class("card-arrow card-arrow-next")) {}
             }
-            div(.class(index > 0 ? "tap-zone tap-previous" : "tap-zone tap-previous disabled")) {
-              span(.class("tap-arrow")) { "‹" }
-            }
-            .onClick { goBack() }
-            div(.class("tap-zone tap-next")) {
-              span(.class("tap-arrow")) { "›" }
-            }
-            .onClick { advance() }
+            // The screen is split into two invisible tap zones: left goes back, right goes forward.
+            div(.class("tap-zone tap-previous")) {}
+              .onClick { goBack() }
+            div(.class("tap-zone tap-next")) {}
+              .onClick { advance() }
           }
         }
         p(.class("hint hint-keys")) { "← まえ ／ → か スペース で つぎ" }
@@ -184,7 +200,7 @@ struct PlaySession {
   }
 
   private var drawCount: Int {
-    let size = deck.cards.count
+    let size = deck.cards(includeZero: includeZero).count
     return count <= 0 || count > size ? size : count
   }
 
@@ -202,7 +218,7 @@ struct PlaySession {
   }
 
   private func start() {
-    cards = deck.draw(count: count)
+    cards = deck.draw(count: count, includeZero: includeZero)
     index = 0
     elapsed = 0
     startedAt = Browser.now()

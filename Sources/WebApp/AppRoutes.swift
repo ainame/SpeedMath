@@ -16,10 +16,15 @@ struct AppRoutes {
   }
 
   /// `count: 0` plays the whole deck. `timer: false` hides the running clock; the time is still
-  /// measured and shown at the end.
+  /// measured and shown at the end. `zero: true` includes problems with 0.
   @Route("/play/:deck")
-  static func play(deck: Deck, count: Query<Int> = Query(0), timer: Query<Bool> = Query(true)) -> PlayPage {
-    PlayPage(deck: deck, count: count.value, showTimer: timer.value)
+  static func play(
+    deck: Deck,
+    count: Query<Int> = Query(0),
+    timer: Query<Bool> = Query(true),
+    zero: Query<Bool> = Query(false)
+  ) -> PlayPage {
+    PlayPage(deck: deck, count: count.value, showTimer: timer.value, includeZero: zero.value)
   }
 
   @NotFound

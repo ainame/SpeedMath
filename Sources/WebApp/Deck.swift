@@ -26,6 +26,9 @@ struct Card: Equatable {
   }
 
   var question: String { "\(lhs) \(op.symbol) \(rhs)" }
+
+  /// True when an operand or the answer is 0, e.g. `6 + 0` or `5 − 5`.
+  var containsZero: Bool { lhs == 0 || rhs == 0 || answer == 0 }
 }
 
 /// The four standard 計算カード decks found in 算数セット (180 cards in total).
@@ -71,7 +74,12 @@ enum Deck: String, CaseIterable, RouteValue {
     }
   }
 
-  var cards: [Card] {
+  /// The deck's cards; without zero problems the two no-carry decks drop from 54 to 45 cards.
+  func cards(includeZero: Bool) -> [Card] {
+    includeZero ? allCards : allCards.filter { !$0.containsZero }
+  }
+
+  private var allCards: [Card] {
     var cards: [Card] = []
     switch self {
     case .additionNoCarry:
@@ -103,9 +111,9 @@ enum Deck: String, CaseIterable, RouteValue {
   }
 
   /// Draws `count` cards in shuffled order; `count <= 0` or more than the deck size means all.
-  func draw(count: Int) -> [Card] {
+  func draw(count: Int, includeZero: Bool) -> [Card] {
     var rng = BrowserRandom()
-    let shuffled = cards.shuffled(using: &rng)
+    let shuffled = cards(includeZero: includeZero).shuffled(using: &rng)
     guard count > 0, count < shuffled.count else { return shuffled }
     return Array(shuffled.prefix(count))
   }

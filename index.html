@@ -81,15 +81,25 @@
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
     /* Invisible halves of the whole screen: left = previous, right = next. */
-    .tap-zone {
-      position: fixed; top: 0; bottom: 0; width: 50%; z-index: 1;
-      display: flex; align-items: center; cursor: pointer;
+    .tap-zone { position: fixed; top: 0; bottom: 0; width: 50%; z-index: 1; cursor: pointer; }
+    .tap-previous { left: 0; }
+    .tap-next { right: 0; }
+
+    /* Round chevron badges inside the card edges, tinted with the deck color. */
+    .card { position: relative; }
+    .card-arrow {
+      position: absolute; top: 50%; width: 44px; height: 44px; margin-top: -22px;
+      border-radius: 50%; background: var(--deck-soft); opacity: 0.9;
     }
-    .tap-previous { left: 0; justify-content: flex-start; }
-    .tap-next { right: 0; justify-content: flex-end; }
-    .tap-zone.disabled { cursor: default; }
-    .tap-zone.disabled .tap-arrow { visibility: hidden; }
-    .tap-arrow { padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right)); font-size: 3rem; font-weight: bold; opacity: 0.25; }
+    .card-arrow::before {
+      content: ""; position: absolute; top: 50%; left: 50%;
+      width: 12px; height: 12px; border: solid var(--deck); border-width: 0 5px 5px 0;
+      border-radius: 2px;
+    }
+    .card-arrow-previous { left: 14px; }
+    .card-arrow-next { right: 14px; }
+    .card-arrow-previous::before { transform: translate(-30%, -50%) rotate(135deg); }
+    .card-arrow-next::before { transform: translate(-70%, -50%) rotate(-45deg); }
     .hint { font-size: 0.95rem; opacity: 0.7; }
     .hint-touch { display: none; }
     @media (hover: none) and (pointer: coarse) {
@@ -117,7 +127,7 @@
     .app:has(.play) .app-header { display: none; }
     @media (min-width: 600px) {
       .deck-grid { grid-template-columns: repeat(4, 1fr); }
-      .options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .options { display: flex; flex-wrap: wrap; column-gap: 32px; }
     }
 
     /* Phones in landscape: fit the whole play screen into the short viewport. */

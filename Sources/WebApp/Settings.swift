@@ -9,4 +9,8 @@ final class PlaySettings {
   var deck: Deck = .additionNoCarry
   var count: Int = 45
   var showTimer: Bool = true
+  /// Whether problems with 0 (e.g. `6 + 0`, `5 − 5`) are included. Off by default.
+  var includeZero: Bool = false
+
+  var deckSize: Int { deck.cards(includeZero: includeZero).count }
 }
