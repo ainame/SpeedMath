@@ -10,9 +10,10 @@ permissions:
   pages: write
   id-token: write
 
+# Only the latest push matters: a newer run cancels any queued or in-progress one.
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
