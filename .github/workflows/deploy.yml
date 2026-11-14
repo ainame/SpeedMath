@@ -25,10 +25,10 @@ jobs:
         uses: actions/checkout@v7
       - name: Install binaryen (wasm-opt), curl and zstd
         run: apt-get update && apt-get install -y binaryen curl zstd
-      - name: Install Node.js and pnpm
-        uses: jdx/mise-action@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
         with:
-          version: 2026.11.1
+          standalone: true
       # `swift sdk install <url>` crashes in its downloader inside the container, so download the
       # bundle with curl, verify it, and install from the local file.
       - name: Install Swift WASM SDK

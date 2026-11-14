@@ -36,16 +36,17 @@ Swift で書かれていて、WebAssembly としてブラウザで動きます�
 - [elementary-router](https://github.com/ainame/elementary-router)（実験的なルーター、ハッシュルーティング）
 - [Vite](https://vite.dev/) + [vite-plugin-swift-wasm](https://github.com/elementary-swift/vite-plugin-swift-wasm)
 
-必要なもの: Swift 6.4 と同じバージョンの Swift SDK for WebAssembly、mise、（任意）wasm-opt
+必要なもの: Swift 6.4 と同じバージョンの Swift SDK for WebAssembly、pnpm、（任意）wasm-opt
+
+pnpm 10.34.9 をインストールしてください。`pnpm install` がプロジェクト用 Node.js を取得します。
 
 ```sh
-mise install
-mise exec -- pnpm install --frozen-lockfile
-mise exec -- pnpm run dev      # 開発サーバー（Swift の変更でホットリロード）
-mise exec -- pnpm exec cf build # Cloudflare 向けビルド（Embedded Swift）
+pnpm install --frozen-lockfile
+pnpm run dev      # 開発サーバー（Swift の変更でホットリロード）
+pnpm exec cf build # Cloudflare 向けビルド（Embedded Swift）
 ```
 
-Cloudflare CLI は beta です。`mise exec -- pnpm exec cf auth login` でログイン後、`mise exec -- pnpm exec cf deploy` で Worker をビルド・公開できます。`cf deploy --dry-run` はアップロードせずに検証します。`wrangler.jsonc` は移行確認のため残していますが、`cf` は `cloudflare.config.ts` を使用します。
+Cloudflare CLI は beta です。`pnpm exec cf auth login` でログイン後、`pnpm exec cf deploy` で Worker をビルド・公開できます。`cf deploy --dry-run` はアップロードせずに検証します。`wrangler.jsonc` は移行確認のため残していますが、`cf` は `cloudflare.config.ts` を使用します。
 
 `main` に push すると GitHub Actions が Cloudflare Workers Static Assets にデプロイします。GitHub Actions の secrets に `CLOUDFLARE_API_TOKEN`（Workers のデプロイ権限）と `CLOUDFLARE_ACCOUNT_ID` を設定してください。Cloudflare への移行完了までは、上記の GitHub Pages 版を利用できます。
 
