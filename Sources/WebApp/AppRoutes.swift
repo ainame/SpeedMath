@@ -15,9 +15,11 @@ struct AppRoutes {
     HomePage()
   }
 
-  @Route("/play/:operation")
-  static func play(operation: Operation, count: Query<Int> = Query(10)) -> PlayPage {
-    PlayPage(operation: operation, count: count.value)
+  /// `count: 0` plays the whole deck. `timer: false` hides the running clock; the time is still
+  /// measured and shown at the end.
+  @Route("/play/:deck")
+  static func play(deck: Deck, count: Query<Int> = Query(0), timer: Query<Bool> = Query(true)) -> PlayPage {
+    PlayPage(deck: deck, count: count.value, showTimer: timer.value)
   }
 
   @NotFound

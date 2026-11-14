@@ -1,0 +1,12 @@
+import Reactivity
+
+/// Choices made on the home screen. Lives above the router so they survive navigation.
+@Reactive
+final class PlaySettings {
+  /// Card counts offered on the home screen; `0` means the whole deck.
+  static let countOptions = [10, 20, 30, 0]
+
+  var deck: Deck = .additionNoCarry
+  var count: Int = 10
+  var showTimer: Bool = true
+}
