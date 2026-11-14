@@ -32,6 +32,11 @@ struct AppRoutes {
     StampsPage()
   }
 
+  @Route("/records")
+  static func records() -> RecordsPage {
+    RecordsPage()
+  }
+
   @NotFound
   static func notFound(context: RouteNotFoundContext) -> NotFoundPage {
     NotFoundPage()

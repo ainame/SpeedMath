@@ -10,7 +10,8 @@ struct HomePage {
   var body: some View {
     section(.class("home")) {
       if let routes {
-        div(.class("stamp-card-link")) {
+        div(.class("home-links")) {
+          AppRoutes.Link(to: routes.records()) { "きろく" }
           AppRoutes.Link(to: routes.stamps()) {
             "スタンプ \(stampBook.stamps.count)/\(Stamp.allCases.count)"
           }
@@ -147,6 +148,7 @@ struct PlaySession {
   @State var isNewStamp: Bool = false
   @State var stampTilt: Int = -8
   @Environment(StampBook.self) var stampBook: StampBook
+  @Environment(TodayRecords.self) var records: TodayRecords
 
   var body: some View {
     section(.class("play")) {
@@ -263,6 +265,7 @@ struct PlaySession {
       index += 1
     } else {
       elapsed = Browser.now() - startedAt
+      records.add(deck: deck, count: cards.count, includeZero: includeZero, milliseconds: elapsed)
       let award = stampBook.award()
       stamp = award.stamp
       isNewStamp = award.isNew
@@ -363,6 +366,62 @@ struct StampSlot {
       } else {
         span(.class("stamp-slot-number")) { "\(number)" }
       }
+    }
+  }
+}
+
+/// Today's finished runs, newest first. The page is fixed like every other screen; only the list
+/// scrolls.
+@View
+struct RecordsPage {
+  @Environment(AppRoutes._routeSetEnvironmentKey) var routes
+  @Environment(TodayRecords.self) var records: TodayRecords
+
+  var body: some View {
+    section(.class("records")) {
+      h2(.class("records-title")) { "きょうの きろく" }
+      div(.class("records-list")) {
+        if records.records.isEmpty {
+          p(.class("records-empty")) { "まだ きろくが ないよ。さいごまで やってみよう！" }
+        } else {
+          for record in records.records.reversed() {
+            RecordRow(record: record)
+          }
+        }
+      }
+      p(.class("records-summary")) { summary }
+      div(.class("back")) {
+        if let routes {
+          AppRoutes.Link(to: routes.home()) { "もどる" }
+        }
+      }
+    }
+    .onAppear { records.refresh() }
+  }
+
+  private var summary: String {
+    let runs = records.records.count
+    let cards = records.records.reduce(0) { $0 + $1.count }
+    return runs == 0 ? "" : "\(runs)かい ・ ぜんぶで \(cards)まい"
+  }
+}
+
+@View
+struct RecordRow {
+  let record: PlayRecord
+
+  var body: some View {
+    div(.class("record-row \(record.deck.colorClass)")) {
+      span(.class("record-at")) { record.finishedAt }
+      span(.class("record-deck")) {
+        span(.class("record-deck-title")) { record.deck.title }
+        span(.class("record-deck-subtitle")) { record.deck.subtitle }
+      }
+      span(.class("record-count")) { "\(record.count)まい" }
+      span(.class(record.includeZero ? "record-zero" : "record-zero off")) {
+        record.includeZero ? "0あり" : "0なし"
+      }
+      ClockDisplay(milliseconds: Double(record.milliseconds))
     }
   }
 }

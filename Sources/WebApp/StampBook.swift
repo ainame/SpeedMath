@@ -20,7 +20,7 @@ final class StampBook {
 
   /// Empties the card when it belongs to an earlier day.
   func refresh() {
-    let today = Self.todayKey()
+    let today = DailyStorage.todayKey()
     if date != today {
       date = today
       stamps = []
@@ -40,11 +40,8 @@ final class StampBook {
   }
 
   private func load() {
-    let today = Self.todayKey()
-    date = today
-    guard let storage = JSObject.global.speedMathStorage.object,
-      let saved = storage["load"].function?.callAsFunction(this: storage, Self.storageKey).object,
-      saved["date"].string == today,
+    date = DailyStorage.todayKey()
+    guard let saved = DailyStorage.load(Self.storageKey, today: date),
       let list = saved["stamps"].object
     else { return }
     let count = Int(list["length"].number ?? 0)
@@ -58,27 +55,13 @@ final class StampBook {
   }
 
   private func save() {
-    guard let storage = JSObject.global.speedMathStorage.object,
-      let makeObject = JSObject.global.Object.function,
-      let makeArray = JSObject.global.Array.function
-    else { return }
-    let list = makeArray.new()
-    for (index, stamp) in stamps.enumerated() {
-      list[index] = stamp.rawValue.jsValue
+    let stamps = self.stamps
+    DailyStorage.save(Self.storageKey, date: date) { value in
+      guard let list = DailyStorage.makeArray() else { return }
+      for (index, stamp) in stamps.enumerated() {
+        list[index] = stamp.rawValue.jsValue
+      }
+      value["stamps"] = list.jsValue
     }
-    let value = makeObject.new()
-    value["date"] = date.jsValue
-    value["stamps"] = list.jsValue
-    _ = storage["save"].function?.callAsFunction(this: storage, Self.storageKey, value)
-  }
-
-  /// Local calendar date, e.g. "2026-11-14".
-  static func todayKey() -> String {
-    guard let makeDate = JSObject.global.Date.function else { return "" }
-    let now = makeDate.new()
-    func part(_ name: String) -> Int {
-      Int(now[name].function?.callAsFunction(this: now).number ?? 0)
-    }
-    return "\(part("getFullYear"))-\(part("getMonth") + 1)-\(part("getDate"))"
   }
 }
