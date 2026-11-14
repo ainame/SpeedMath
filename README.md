@@ -36,15 +36,16 @@ Swift で書かれていて、WebAssembly としてブラウザで動きます�
 - [elementary-router](https://github.com/ainame/elementary-router)（実験的なルーター、ハッシュルーティング）
 - [Vite](https://vite.dev/) + [vite-plugin-swift-wasm](https://github.com/elementary-swift/vite-plugin-swift-wasm)
 
-必要なもの: Swift 6.4 と同じバージョンの Swift SDK for WebAssembly、Node.js 22 以上、（任意）wasm-opt
+必要なもの: Swift 6.4 と同じバージョンの Swift SDK for WebAssembly、mise、（任意）wasm-opt
 
 ```sh
-npm install
-npm run dev      # 開発サーバー（Swift の変更でホットリロード）
-npm run build    # リリースビルド（Embedded Swift）
+mise install
+mise exec -- pnpm install --frozen-lockfile
+mise exec -- pnpm run dev      # 開発サーバー（Swift の変更でホットリロード）
+mise exec -- pnpm run build    # リリースビルド（Embedded Swift）
 ```
 
-`main` に push すると GitHub Actions で GitHub Pages にデプロイされます。
+`main` に push すると GitHub Actions が Cloudflare Workers Static Assets にデプロイします。GitHub Actions の secrets に `CLOUDFLARE_API_TOKEN`（Workers のデプロイ権限）と `CLOUDFLARE_ACCOUNT_ID` を設定してください。Cloudflare への移行完了までは、上記の GitHub Pages 版を利用できます。
 
 [elementary-swift/starter-vite](https://github.com/elementary-swift/starter-vite) テンプレートから作成しました。
 

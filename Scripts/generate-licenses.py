@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates public/licenses.html from the license files of the code shipped in the web bundle.
 
-Run after `swift package resolve` and `npm install`:  python3 Scripts/generate-licenses.py
+Run after `swift package resolve` and `pnpm install`:  python3 Scripts/generate-licenses.py
 """
 import html
 from pathlib import Path
