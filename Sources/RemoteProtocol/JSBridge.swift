@@ -168,19 +168,4 @@ public enum JSPromises {
     }
     return JS.call(promise, "then", ok!.jsValue, fail!.jsValue).object
   }
-
-  /// A JS promise that `body` resolves by calling its argument exactly once.
-  public static func make(_ body: (@escaping (JSValue) -> Void) -> Void) -> JSValue {
-    var settle: ((JSValue) -> Void)?
-    let promise = JSPromise { resolver in
-      settle = { resolver(.success($0)) }
-    }
-    if let settle { body(settle) }
-    return promise.jsValue
-  }
-
-  /// An already resolved promise.
-  public static func resolved(_ value: JSValue = .undefined) -> JSValue {
-    make { $0(value) }
-  }
 }

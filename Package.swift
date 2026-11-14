@@ -23,6 +23,7 @@ let package = Package(
       dependencies: [
         "ProtocolModels", "RemoteProtocol",
         .product(name: "JavaScriptKit", package: "JavaScriptKit"),
+        .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
       swiftSettings: [.swiftLanguageMode(.v5)]
     ),

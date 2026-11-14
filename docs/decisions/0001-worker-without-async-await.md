@@ -1,90 +1,80 @@
-# 0001: The Swift Worker uses `Deferred`, not `async`/`await`
+# 0001: Swift concurrency in the Embedded Swift Worker
 
-- Status: accepted (2026-11-14)
-- Area: `Sources/Worker`, `Sources/RemoteProtocol/Deferred.swift`, `worker/index.js`
+- Status: accepted (2026-11-14), revised the same day
+- Area: `Sources/Worker`, `worker/index.js` (branch `swift-worker`)
 
 ## Context
 
 The remote-control backend (the Worker and its two Durable Objects, `SessionObject` and
-`CodeShard`) was ported from JavaScript to Swift. Cloudflare requires the module entry and the
-Durable Object classes to be JavaScript, so `worker/index.js` stays as a shell that forwards every
-call to Swift. The logic needs a few asynchronous steps: the rate limiter, reading a request body,
-RPC calls between Durable Objects, and storage promises (`setAlarm`, `deleteAll`).
+`CodeShard`) was ported from JavaScript to Swift on this branch. Cloudflare requires the module
+entry and the Durable Object classes to be JavaScript, so `worker/index.js` stays as a shell that
+forwards every call to Swift. The logic has a few asynchronous steps: the rate limiter, reading a
+request body, RPC calls between Durable Objects, and storage promises (`setAlarm`, `deleteAll`).
 
-We measured two ways to build the Worker Wasm in local workerd (`vite preview`), each with a
-spike that started a `Task` and awaited a JS promise:
+The account is on the Workers Free plan (10 ms of CPU per request), so the Worker uses Embedded
+Swift: the regular Swift Wasm runtime is 3.9 MB (1.4 MB gzipped) and took ~15 ms to start locally,
+against ~3 ms for Embedded.
 
-| Build | Swift `async`/`await` | Worker Wasm | Cold init, local Mac |
-| --- | --- | --- | --- |
-| Embedded Swift (Swift 6.4.0 and 6.4.2) | Never runs: the global executor installed by `JavaScriptEventLoop` receives no jobs, so a `Task {}` never starts | ~0.1 MB (0.2 MB with the full Worker) | ~3 ms |
-| Regular Swift Wasm (no Foundation) | Works | 3.9 MB (1.4 MB gzipped) | ~15 ms |
+## First attempt: no concurrency (`Deferred`)
 
-The project stays on the Workers Free plan, which allows 10 ms of CPU per request. A cold start of
-the regular build (a new isolate, or a Durable Object waking up when a Remote reconnects) would
-likely exceed that on Cloudflare's servers. The Paid plan ($5/month minimum, 30 s CPU per request
-by default) removes that limit.
+The first Embedded spike used a non-`async` `@main` with
+`JavaScriptEventLoop.installGlobalExecutor()`. In Embedded Swift (6.4.0 and 6.4.2) that hook never
+runs jobs: a `Task {}` never starts. The Worker was therefore written with a hand-rolled
+`Deferred<Value>` type that chained JS promises with callbacks (commit `33c50d2`).
 
-## Decision
+## Decision: real `async`/`await`
 
-Build the Worker with Embedded Swift and do not use Swift concurrency in it. Every asynchronous
-step returns a `Deferred<Value>` (`Sources/RemoteProtocol/Deferred.swift`), which mirrors `async`:
+Swift concurrency does work in the Embedded Worker with the custom-executor pattern
+([Swift Forums](https://forums.swift.org/t/swift-6-2-async-await-no-longer-works-on-webassembly-with-js-interop-crashes-instantly-on-suspension/82269)).
+`Sources/Worker/App.swift`:
 
-| Deferred | async/await |
-| --- | --- |
-| `func f() -> Deferred<T>` | `func f() async -> T` |
-| `return .value(x)` | `return x` |
-| `f().then { x in g(x) }` | `let x = await f(); return await g(x)` |
-| `f().map { x in h(x) }` | `let x = await f(); return h(x)` |
-| `Deferred.promise(jsValue)` | `try? await JSPromise(jsValue)!.value` |
-| `deferred.jsPromise` at an export | `JSPromise.async { ... }` |
+```swift
+import JavaScriptEventLoop
+typealias DefaultExecutorFactory = JavaScriptEventLoop  // not installGlobalExecutor()
 
-Most of the Worker is synchronous anyway (SQLite and WebSocket sends), so `Deferred` appears in a
-handful of places: `Router` (rate limit, body, RPC), `SessionObject.invite`/`reserveInvite` (the
-code retry loop), and storage calls in `Platform`.
+@main struct WorkerMain {
+  static func main() async {
+    // register exports on globalThis.speedMathWorker ...
+    // An async main that returns makes the Wasm reactor call exit() ("exit with exit code 0").
+    await withUnsafeContinuation { (_: UnsafeContinuation<Void, Never>) in }
+  }
+}
+```
 
-## Consequences
+Exports return `JSPromise.async { ... }.jsValue`. JS promises are awaited through
+`Platform.resolve`, which goes through `Promise.resolve` first (see the interop notes). `Deferred`
+is gone; the invite retry and the body read are plain loops again.
 
-- Small, fast Worker that fits the Free plan.
-- Loops become recursion (`reserveInvite`, `Router.readChunks`); each is commented with the loop it
-  stands for.
-- Every code path must return a `Deferred`, so the compiler rejects a branch that would never
-  answer. Workers otherwise report such a branch as a hung request.
+Verified with Swift 6.4.2, JavaScriptKit 0.63.0, local workerd: Worker builds (Worker Wasm 265 KB,
+up from 217 KB with `Deferred`), 10 Durable Object tests and 9 browser tests pass.
 
-Two interop rules learned during the port apply whichever style is used:
+## Interop rules
 
-- Workers RPC stubs treat every property, `apply` included, as a remote method. JavaScriptKit calls
-  functions as `fn.apply(this, args)`, so RPC methods are called through `Reflect.apply`
+- Workers RPC stubs treat every property, `apply` included, as a remote method. JavaScriptKit
+  calls functions as `fn.apply(this, args)`, so RPC methods are called through `Reflect.apply`
   (`Platform.rpc`).
-- RPC results are lazy thenables, not plain promises. They are awaited through `Promise.resolve`
-  (`Deferred.promise`), as JS `await` does.
+- RPC results are lazy thenables, not plain promises. Await them through `Promise.resolve`, as JS
+  `await` does (`Platform.resolve`).
+- `JSObject` already has `hash(into:)`, so read a field named `hash` with `object["hash"]`.
+- A JS exception inside a JavaScriptKit call unwinds through the Wasm; wrap calls that can throw
+  (`JSON.parse`) in a bridge that returns null.
 
-## Measured on staging (Cloudflare, 2026-11-14)
+## Cold start on the Free plan
 
-CPU time per invocation from Workers Logs, same Playwright suite and smoke test:
+CPU time per invocation on staging (Workers Logs), same Playwright suite and smoke test:
 
 | Worker | p50 | p95 | max | > 10 ms |
 | --- | --- | --- | --- | --- |
-| JavaScript (before the port, 4 versions) | 0 ms | 1 ms | 2–3 ms | 0 of ~1,500 |
+| JavaScript (`main`, 4 versions) | 0 ms | 1 ms | 2–3 ms | 0 of ~1,500 |
 | Embedded Swift with `Deferred` (2 versions) | 1 ms | 10–11 ms | 21–25 ms | 21 of 414 |
+| Embedded Swift with `async`/`await` | not measured yet | | | |
 
-The slow invocations are the first call into a new Durable Object or isolate, where the Worker
-Wasm (217 KB after `wasm-opt -Os`) is compiled and initialized: `create` for a new session, the
-first `reserve` on a code shard, the first WebSocket upgrade, and the first message after a session
-wakes from hibernation. Warm calls stay at 0–2 ms. No invocation failed in these runs (outcomes
-were only `ok` and client `canceled`), but the cold path is above the Free plan's nominal 10 ms.
+The slow invocations are the first call into a new Durable Object or isolate (compiling and
+initializing the Wasm): `create` for a new session, the first `reserve` on a code shard, the first
+WebSocket upgrade, and the first message after a session wakes from hibernation. Warm calls stay at
+0–2 ms. This is why `main` keeps the JavaScript Worker.
 
-## When to revisit
+## When to merge into `main`
 
-Switch to `async`/`await` when either becomes true:
-
-1. **The account moves to Workers Paid.** Then use the regular Wasm SDK for the Worker only
-   (`swiftWasm({ useEmbeddedSDK: false })` would affect the browser app too; give the Worker its own
-   build or plugin instance). Measure cold-start CPU on staging in Workers Logs before production.
-2. **Embedded Swift can run concurrency in a Worker.** Retest with a new toolchain or JavaScriptKit
-   release: a Worker export that runs `Task { }` and awaits `JSPromise(...).value` must resolve.
-   The spike from this decision is easy to recreate: `JavaScriptEventLoop.installGlobalExecutor()`
-   in `main`, then a `JSClosure` that returns `JSPromise.async { ... }.jsValue`.
-
-The migration is mechanical with the table above: convert `Deferred` functions to `async`, starting
-at the leaves (`Platform.rpc`, `Platform.storage`), then the callers, and finally replace
-`.jsPromise` at the exports in `Sources/Worker/App.swift`.
+1. The account moves to Workers Paid (30 s CPU), or
+2. cold-start CPU on staging drops reliably under 10 ms at p99.
