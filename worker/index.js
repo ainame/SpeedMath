@@ -11,26 +11,43 @@ globalThis.speedMathBridge = {
   },
 };
 
-let ready;
-const swift = () => (ready ??= init().then(() => globalThis.speedMathWorker));
+// Start Swift while the isolate starts up, so its cost falls on startup rather than on the first
+// request, and run Swift's shared helpers once so V8 compiles them ahead of time.
+// Workers forbid random values at global scope, but Swift's start-up seeds its hash function from
+// WASI random_get. Give it fixed bytes during start-up only; handlers get real randomness (session
+// ids, keys and codes are drawn per request), and Swift's internal dictionaries are not keyed by
+// client input.
+// Top-level await only settles on microtasks, so instantiate the precompiled module synchronously.
+const getRandomValues = crypto.getRandomValues;
+const instantiate = WebAssembly.instantiate;
+crypto.getRandomValues = array => array.fill(7);
+WebAssembly.instantiate = async (module, imports) => new WebAssembly.Instance(module, imports);
+let api;
+try {
+  api = await init().then(() => globalThis.speedMathWorker);
+  api.warmUp();
+} finally {
+  crypto.getRandomValues = getRandomValues;
+  WebAssembly.instantiate = instantiate;
+}
 
 export default {
-  async fetch(request, env, ctx) { return (await swift()).fetch(request, env, ctx); },
+  async fetch(request, env, ctx) { return api.fetch(request, env, ctx); },
 };
 
 export class CodeShard extends DurableObject {
-  async reserve(hash, id, generation, expires) { return (await swift()).shardReserve(this.ctx, hash, id, generation, expires); }
-  async lookup(hash) { return (await swift()).shardLookup(this.ctx, hash); }
-  async release(hash, id, generation) { return (await swift()).shardRelease(this.ctx, hash, id, generation); }
-  async alarm() { return (await swift()).shardAlarm(this.ctx); }
+  async reserve(hash, id, generation, expires) { return api.shardReserve(this.ctx, hash, id, generation, expires); }
+  async lookup(hash) { return api.shardLookup(this.ctx, hash); }
+  async release(hash, id, generation) { return api.shardRelease(this.ctx, hash, id, generation); }
+  async alarm() { return api.shardAlarm(this.ctx); }
 }
 
 export class SessionObject extends DurableObject {
-  async create(id, hash) { return (await swift()).sessionCreate(this.ctx, id, hash); }
-  async validLookup(hash, generation) { return (await swift()).sessionValidLookup(this.ctx, hash, generation); }
-  async fetch() { return (await swift()).sessionFetch(this.ctx); }
-  async webSocketMessage(ws, text) { return (await swift()).sessionMessage(this.ctx, ws, text); }
-  async webSocketClose(ws) { return (await swift()).sessionClose(this.ctx, ws); }
-  async webSocketError(ws) { return (await swift()).sessionClose(this.ctx, ws); }
-  async alarm() { return (await swift()).sessionAlarm(this.ctx); }
+  async create(id, hash) { return api.sessionCreate(this.ctx, id, hash); }
+  async validLookup(hash, generation) { return api.sessionValidLookup(this.ctx, hash, generation); }
+  async fetch() { return api.sessionFetch(this.ctx); }
+  async webSocketMessage(ws, text) { return api.sessionMessage(this.ctx, ws, text); }
+  async webSocketClose(ws) { return api.sessionClose(this.ctx, ws); }
+  async webSocketError(ws) { return api.sessionClose(this.ctx, ws); }
+  async alarm() { return api.sessionAlarm(this.ctx); }
 }

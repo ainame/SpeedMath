@@ -82,6 +82,11 @@ struct WorkerMain {
       return done { await SessionObject(ctx: ctx).alarm() }
     }
 
+    export("warmUp") { _ in
+      WarmUp.run()
+      return .undefined
+    }
+
     JS.global["speedMathWorker"] = api.jsValue
     // An async main that returns makes the Wasm reactor call exit(); stay suspended instead.
     await withUnsafeContinuation { (_: UnsafeContinuation<Void, Never>) in }

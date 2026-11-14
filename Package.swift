@@ -16,7 +16,7 @@ let package = Package(
     .target(
       name: "RemoteProtocol",
       dependencies: ["ProtocolModels", .product(name: "JavaScriptKit", package: "JavaScriptKit")],
-      swiftSettings: [.swiftLanguageMode(.v5)]
+      swiftSettings: [.swiftLanguageMode(.v5), .unsafeFlags(["-Osize"])]
     ),
     .executableTarget(
       name: "Worker",
@@ -25,7 +25,7 @@ let package = Package(
         .product(name: "JavaScriptKit", package: "JavaScriptKit"),
         .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
-      swiftSettings: [.swiftLanguageMode(.v5)]
+      swiftSettings: [.swiftLanguageMode(.v5), .unsafeFlags(["-Osize"])]
     ),
     .executableTarget(
       name: "WebApp",
