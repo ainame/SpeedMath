@@ -36,7 +36,10 @@
       height: 100%; overflow: hidden; overscroll-behavior: none;
       font-size: clamp(11px, calc(6px + 1.6vmin), 18px);
     }
+    /* iOS can leave the document scrolled after a rotation even with overflow: hidden, so the
+       body is pinned to the viewport. */
     body {
+      position: fixed; inset: 0;
       height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none;
       display: flex; align-items: center; justify-content: center;
       font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
@@ -259,6 +262,8 @@
 <body>
   <script>
     // localStorage can throw (private mode, blocked storage), so the Swift side goes through this.
+    // Safety net for the same iOS rotation issue: snap back to the top whenever the viewport changes.
+    window.addEventListener("resize", () => window.scrollTo(0, 0));
     window.speedMathStorage = {
       load(key) {
         try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
