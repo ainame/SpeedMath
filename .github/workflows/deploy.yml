@@ -24,8 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Install binaryen (wasm-opt) and curl
-        run: apt-get update && apt-get install -y binaryen curl
+      - name: Install binaryen (wasm-opt), curl and zstd
+        run: apt-get update && apt-get install -y binaryen curl zstd
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -39,6 +39,15 @@ jobs:
           echo "$WASM_SDK_CHECKSUM  /tmp/wasm-sdk.artifactbundle.tar.gz" | sha256sum -c -
           swift sdk install /tmp/wasm-sdk.artifactbundle.tar.gz
           swift sdk list
+      # Most of a cold build is compiling swift-syntax for the macros. Caching `.build` keyed on the
+      # resolved dependencies lets later runs rebuild only the app and the libraries that changed.
+      - name: Cache SwiftPM build
+        uses: actions/cache@v6
+        with:
+          path: .build
+          key: swiftpm-build-swift-6.4.2-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            swiftpm-build-swift-6.4.2-
       - name: Install dependencies
         run: swift package resolve && npm ci
       - name: Build
