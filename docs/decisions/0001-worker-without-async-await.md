@@ -67,12 +67,13 @@ CPU time per invocation on staging (Workers Logs), same Playwright suite and smo
 | --- | --- | --- | --- | --- |
 | JavaScript (`main`, 4 versions) | 0 ms | 1 ms | 2–3 ms | 0 of ~1,500 |
 | Embedded Swift with `Deferred` (2 versions) | 1 ms | 10–11 ms | 21–25 ms | 21 of 414 |
-| Embedded Swift with `async`/`await` | not measured yet | | | |
+| Embedded Swift with `async`/`await` (`98e2367b`) | 1 ms | 11 ms | 22 ms | 14 of 198 |
 
 The slow invocations are the first call into a new Durable Object or isolate (compiling and
 initializing the Wasm): `create` for a new session, the first `reserve` on a code shard, the first
 WebSocket upgrade, and the first message after a session wakes from hibernation. Warm calls stay at
-0–2 ms. This is why `main` keeps the JavaScript Worker.
+0–2 ms. Switching to `async`/`await` did not change the cold-start picture (p99 20 ms). This is
+why `main` keeps the JavaScript Worker.
 
 ## When to merge into `main`
 
