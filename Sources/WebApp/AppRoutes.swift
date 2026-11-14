@@ -1,3 +1,4 @@
+import SessionLogic
 import ElementaryRouter
 import ElementaryUI
 
@@ -25,6 +26,11 @@ struct AppRoutes {
     zero: Query<Bool> = Query(false)
   ) -> PlayPage {
     PlayPage(deck: deck, count: count.value, showTimer: timer.value, includeZero: zero.value)
+  }
+
+  @Route("/remote")
+  static func remote() -> RemotePage {
+    RemotePage()
   }
 
   @Route("/stamps")

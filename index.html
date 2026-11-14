@@ -3,6 +3,7 @@
 
 <head>
   <title>スピード計算</title>
+  <meta name="referrer" content="no-referrer" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <style>
@@ -250,6 +251,43 @@
       background: var(--surface-pressed);
     }
 
+    .progress-timer { gap: 0.35em; align-items: center; }
+    .remote-toggle { flex: none; position: relative; z-index: 2; }
+    .pair-panel {
+      position: absolute; z-index: 5;
+      inset: calc(var(--pad-y) + var(--safe-top)) max(var(--pad-x), var(--safe-right))
+        max(var(--pad-y), var(--safe-bottom)) max(var(--pad-x), var(--safe-left));
+      padding: 0.8em; border: 2.5px solid var(--line-strong); border-radius: 1.2em;
+      background: var(--surface); display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 0.6em; text-align: center; container-type: size;
+    }
+    .pair-heading, .pair-invite, .pair-help, .remote-actions {
+      display: flex; gap: 0.65em; align-items: center; justify-content: center;
+    }
+    .pair-invite { min-height: 0; }
+    .pair-help { flex-direction: column; max-width: 23em; }
+    .pair-qr { width: min(48cqh, 36cqw, 240px); image-rendering: pixelated; }
+    .pair-code { font: bold 1.35rem ui-monospace, monospace; letter-spacing: 0.08em; white-space: nowrap; }
+    .remote-page {
+      justify-content: center; align-items: center; text-align: center;
+      gap: clamp(4px, 1.5vmin, 12px);
+    }
+    .remote-status { color: var(--text-muted); }
+    .remote-problem { font-size: 2.6rem; line-height: 1.15; font-weight: bold; }
+    .remote-answer { font-size: 1.5rem; font-weight: bold; }
+    .remote-actions .chip { min-width: 6em; min-height: 2.7em; }
+    .remote-actions .chip:disabled { opacity: 0.45; cursor: default; }
+    .remote-code-input {
+      font: inherit; font-size: max(16px, 1rem);
+      width: 12em; max-width: 56vw; text-align: center; color: var(--text);
+      background: var(--surface); padding: 0.4em; border: 2px solid var(--line); border-radius: 0.6em;
+    }
+    @media (orientation: portrait) {
+      .pair-invite { flex-direction: column; }
+      .pair-qr { width: min(56cqw, 36cqh, 240px); }
+      .progress .clock { padding-inline: 0.3em; font-size: 0.95rem; }
+    }
+
     /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
     @media (orientation: portrait) {
       .app:has(.home) .app-header h1 { text-align: left; }
@@ -278,10 +316,7 @@
       },
     };
   </script>
-  <script type="module">
-    import { init } from "virtual:swift-wasm?js&product=WebApp";
-    await init()
-  </script>
+  <script type="module" src="/web/main.js"></script>
 </body>
 
 </html>

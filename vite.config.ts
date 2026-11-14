@@ -4,6 +4,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import swiftWasm from "@elementary-swift/vite-plugin-swift-wasm";
 
 export default defineConfig({
+  server: { watch: { ignored: ["**/worker/generated", "**/worker/generated/**", "**/.cloudflare/**"] } },
   plugins: [
     {
       name: "speedmath-worker-wasm",

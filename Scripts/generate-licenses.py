@@ -24,6 +24,7 @@ components = [
      "BasicContainers", "Apache-2.0-RLE"),
     ("browser_wasi_shim", "https://github.com/bjorn3/browser_wasi_shim",
      "MIT OR Apache-2.0（MIT を選択）", "MIT-wasi-shim"),
+    ("QRCode Generator", "https://github.com/kazuhikoarase/qrcode-generator", "", "MIT-qrcode"),
     ("Swift standard library", "https://github.com/swiftlang/swift",
      "Apache-2.0 with Runtime Library Exception", None),
 ]
@@ -32,6 +33,7 @@ licenses = {
     "MIT-SpeedMath": ("MIT License — SpeedMath", read(root / "LICENSE")),
     "MIT-router": ("MIT License — elementary-router", read(checkouts / "elementary-router" / "LICENSE")),
     "MIT-JavaScriptKit": ("MIT License — JavaScriptKit", read(checkouts / "JavaScriptKit" / "LICENSE")),
+    "MIT-qrcode": ("MIT License — QRCode Generator", read(root / "Licenses" / "qrcode-generator.txt")),
     "MIT-wasi-shim": ("MIT License — browser_wasi_shim",
                       read(root / "node_modules" / "@bjorn3" / "browser_wasi_shim" / "LICENSE-MIT")),
     "Apache-2.0": ("Apache License 2.0 — ElementaryUI, Elementary",

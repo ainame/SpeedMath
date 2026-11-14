@@ -1,5 +1,8 @@
 import ElementaryRouter
 import ElementaryUI
+import JavaScriptKit
+import ProtocolModels
+import SessionLogic
 
 @View
 struct HomePage {
@@ -11,6 +14,7 @@ struct HomePage {
     section(.class("home")) {
       if let routes {
         div(.class("home-links")) {
+          AppRoutes.Link(to: routes.remote()) { "リモコン" }
           AppRoutes.Link(to: routes.records()) { "きろく" }
           AppRoutes.Link(to: routes.stamps()) {
             "スタンプ \(stampBook.stamps.count)/\(Stamp.allCases.count)"
@@ -127,12 +131,6 @@ struct PlayPage {
 
 @View
 struct PlaySession {
-  enum Phase {
-    case ready
-    case playing
-    case finished
-  }
-
   @Environment(AppRoutes._routeSetEnvironmentKey) var routes
   @Environment(AppRoutes._routerEnvironmentKey) var router
 
@@ -141,11 +139,11 @@ struct PlaySession {
   let showTimer: Bool
   let includeZero: Bool
 
-  @State var phase: Phase = .ready
+  @State var play = PlayState()
   @State var cards: [Card] = []
-  @State var index: Int = 0
-  @State var startedAt: Double = 0
-  @State var elapsed: Double = 0
+  @State var readyEpoch = ""
+  @State var remote: JSObject?
+  @State var remoteModel: JSObject?
   @State var stamp: Stamp = .yokuDekimashita
   @State var isNewStamp: Bool = false
   @State var stampTilt: Int = -8
@@ -154,7 +152,7 @@ struct PlaySession {
 
   var body: some View {
     section(.class("play")) {
-      switch phase {
+      switch play.phase {
       case .ready:
         div(.class("ready")) {
           p(.class("ready-deck")) { "\(deck.title)（\(deck.subtitle)）" }
@@ -162,6 +160,7 @@ struct PlaySession {
           button(.type(.button), .class("big-button")) { "はじめる" }
             .onClick { start() }
           p(.class("hint hint-keys")) { "スペース か → で はじまるよ" }
+          remoteButton
         }
         backLink
 
@@ -172,19 +171,20 @@ struct PlaySession {
               AppRoutes.Link(to: routes.home()) { "✕ やめる" }
             }
           }
-          span(.class("progress-count")) { "\(index + 1) / \(cards.count)" }
+          span(.class("progress-count")) { "\(play.index + 1) / \(cards.count)" }
           div(.class("progress-side progress-timer")) {
             if showTimer {
-              LiveTimer(startedAt: startedAt)
+              LiveTimer(startedAt: play.startedAt)
             }
+            remoteButton
           }
         }
-        if index < cards.count {
+        if play.index < cards.count {
           // The screen is split into two tap zones: left goes back, right goes forward.
           div(.class("card-area")) {
             div(.class("card \(deck.colorClass)")) {
-              cards[index].question
-              if index > 0 {
+              cards[play.index].question
+              if play.index > 0 {
                 span(.class("card-arrow card-arrow-previous")) {}
               }
               span(.class("card-arrow card-arrow-next")) {}
@@ -204,17 +204,27 @@ struct PlaySession {
           img(.src(stamp.path), .alt(stamp.label), .class("stamp"), .style(["--tilt": "\(stampTilt)deg"]))
           div(.class("finished-info")) {
             p(.class("finished-title")) { "おわり！" }
-            p(.class("finished-time")) { ClockDisplay(milliseconds: elapsed) }
+            p(.class("finished-time")) { ClockDisplay(milliseconds: play.elapsed) }
             p(.class("finished-count")) { "\(cards.count)まい できたね" }
             p(.class("finished-stamp")) { stampMessage }
             button(.type(.button), .class("big-button")) { "もういちど" }
-              .onClick { phase = .ready }
+              .onClick { replay() }
+            remoteButton
           }
         }
         backLink
       }
+      RemotePanel(model: remoteModel, link: remote)
     }
     .attach(BrowserListener.cardKeys { key in handle(key) })
+    .onAppear {
+      readyEpoch = RemoteBrowser.identifier()
+      remote = RemoteBrowser.mount(role: 1, render: { remoteModel = $0 }, presenter: receive)
+    }
+    .onDisappear {
+      if let remote { _ = remote.dispose.function?.callAsFunction(this: remote) }
+      remote = nil
+    }
   }
 
   private var backLink: some View {
@@ -238,7 +248,11 @@ struct PlaySession {
   }
 
   private func handle(_ key: CardKey) {
-    switch (phase, key) {
+    if remoteModel?["open"].boolean == true {
+      if case .quit = key { showRemote() }
+      return
+    }
+    switch (play.phase, key) {
     case (.ready, .next):
       start()
     case (.playing, .next):
@@ -258,30 +272,95 @@ struct PlaySession {
     try? router.navigate(to: routes.home())
   }
 
+  private var remoteButton: some View {
+    button(.type(.button), .class("chip remote-toggle")) { "リモコン" }
+      .onClick { showRemote() }
+  }
+
+  private func showRemote() {
+    if let remote { _ = remote.show.function?.callAsFunction(this: remote) }
+  }
+
   private func start() {
-    cards = deck.draw(count: count, includeZero: includeZero)
-    index = 0
-    elapsed = 0
-    startedAt = Browser.now()
-    phase = .playing
+    guard play.phase == .ready else { return }
+    var rng = BrowserRandom()
+    cards = deck.draw(count: count, includeZero: includeZero, using: &rng)
+    play.start(count: cards.count, epoch: RemoteBrowser.identifier(), now: Browser.now())
+    publish()
   }
 
-  private func goBack() {
-    if index > 0 { index -= 1 }
+  private func replay() {
+    guard play.phase == .finished else { return }
+    readyEpoch = RemoteBrowser.identifier()
+    play.reset()
+    cards = []
+    publish()
   }
 
-  private func advance() {
-    if index + 1 < cards.count {
-      index += 1
+  private func goBack() { move(.previous) }
+  private func advance() { move(.next) }
+
+  private func move(_ direction: Direction) {
+    let before = play.phase
+    play.move(direction, now: Browser.now())
+    afterMove(from: before)
+    publish()
+  }
+
+  private func receive(_ payload: JSObject?) {
+    if let payload, let id = payload["id"].string, let epoch = payload["epoch"].string,
+      let version = payload["baseVersion"].number, let raw = payload["direction"].number,
+      let direction = Direction(rawValue: Int32(raw))
+    {
+      let before = play.phase
+      let result = play.receive(
+        Command(id: id, epoch: epoch, baseVersion: Int(version), direction: direction),
+        role: .remote, now: Browser.now()
+      )
+      afterMove(from: before)
+      publish()
+      if let remote {
+        _ = remote.receipt.function?.callAsFunction(this: remote, epoch, id, Int(result.rawValue))
+      }
     } else {
-      elapsed = Browser.now() - startedAt
-      records.add(deck: deck, count: cards.count, includeZero: includeZero, milliseconds: elapsed)
-      let award = stampBook.award()
-      stamp = award.stamp
-      isNewStamp = award.isNew
-      stampTilt = Stamp.randomTilt()
-      phase = .finished
+      publish()
     }
+  }
+
+  private func afterMove(from before: PlayPhase) {
+    guard before == .playing, play.phase == .finished else { return }
+    records.add(deck: deck, count: cards.count, includeZero: includeZero, milliseconds: play.elapsed)
+    let award = stampBook.award()
+    stamp = award.stamp
+    isNewStamp = award.isNew
+    stampTilt = Stamp.randomTilt()
+  }
+
+  private func publish() {
+    guard remoteModel?["paired"].boolean == true, let remote,
+      let snapshot = DailyStorage.makeObject(), let list = DailyStorage.makeArray()
+    else { return }
+    let epoch = play.phase == .ready ? readyEpoch : play.epoch
+    snapshot["epoch"] = epoch.jsValue
+    snapshot["deckVersion"] = epoch.jsValue
+    snapshot["version"] = play.version.jsValue
+    snapshot["phase"] = Int(play.phase.rawValue).jsValue
+    snapshot["index"] = play.index.jsValue
+    let elapsed = switch play.phase {
+    case .ready: 0.0
+    case .playing: max(0, Browser.now() - play.startedAt)
+    case .finished: play.elapsed
+    }
+    snapshot["elapsed"] = Int(min(86_400_000, elapsed)).jsValue
+    for (i, card) in cards.enumerated() {
+      guard let tuple = DailyStorage.makeArray() else { continue }
+      tuple[0] = card.lhs.jsValue
+      tuple[1] = (card.op == .plus ? 1 : -1).jsValue
+      tuple[2] = card.rhs.jsValue
+      list[i] = tuple.jsValue
+    }
+    snapshot["cards"] = list.jsValue
+    _ = remote.publish.function?.callAsFunction(this: remote, snapshot)
   }
 }
 
