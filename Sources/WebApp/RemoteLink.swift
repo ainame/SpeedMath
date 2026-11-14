@@ -577,9 +577,15 @@ final class RemoteLink {
         $0.status = "あたらしい コードを だしてね"
       }
     case "reset":
+      snapshot = nil
+      inFlightCommand = nil
       update {
         $0.online = false
         $0.paired = false
+        $0.busy = false
+        $0.phase = .ready
+        $0.question = ""
+        $0.answer = ""
         $0.request = nil
         $0.check = nil
         $0.code = nil

@@ -58,6 +58,21 @@ Two interop rules learned during the port apply whichever style is used:
 - RPC results are lazy thenables, not plain promises. They are awaited through `Promise.resolve`
   (`Deferred.promise`), as JS `await` does.
 
+## Measured on staging (Cloudflare, 2026-11-14)
+
+CPU time per invocation from Workers Logs, same Playwright suite and smoke test:
+
+| Worker | p50 | p95 | max | > 10 ms |
+| --- | --- | --- | --- | --- |
+| JavaScript (before the port, 4 versions) | 0 ms | 1 ms | 2–3 ms | 0 of ~1,500 |
+| Embedded Swift with `Deferred` (2 versions) | 1 ms | 10–11 ms | 21–25 ms | 21 of 414 |
+
+The slow invocations are the first call into a new Durable Object or isolate, where the Worker
+Wasm (217 KB after `wasm-opt -Os`) is compiled and initialized: `create` for a new session, the
+first `reserve` on a code shard, the first WebSocket upgrade, and the first message after a session
+wakes from hibernation. Warm calls stay at 0–2 ms. No invocation failed in these runs (outcomes
+were only `ok` and client `canceled`), but the cold path is above the Free plan's nominal 10 ms.
+
 ## When to revisit
 
 Switch to `async`/`await` when either becomes true:
