@@ -132,3 +132,30 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
     await expect(page.getByRole("textbox", { name: "コード" })).toBeVisible();
   });
 }
+
+test("solo play tolerates blocked storage and clears records on the next day", async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.clock.install({ time: new Date(2026, 10, 14, 23, 59, 50) });
+    await page.goto("/#/play/add?count=1");
+    await page.getByRole("button", { name: "はじめる" }).click();
+    await page.keyboard.press("ArrowRight");
+    await page.getByText("おわり！", { exact: true }).waitFor();
+    await page.goto("/#/records");
+    await expect(page.locator(".record-row")).toHaveCount(1);
+    await page.clock.setSystemTime(new Date(2026, 10, 15, 0, 0, 10));
+    await page.goto("/#/stamps");
+    await expect(page.locator(".stamp-slot-image")).toHaveCount(0);
+    await page.goto("/#/records");
+    await expect(page.locator(".record-row")).toHaveCount(0);
+    const blocked = await context.newPage();
+    await blocked.addInitScript(() => {
+      Object.defineProperty(window, "localStorage", { get() { throw new DOMException("blocked", "SecurityError"); } });
+    });
+    await blocked.goto("/#/play/add?count=1");
+    await blocked.getByRole("button", { name: "はじめる" }).click();
+    await blocked.keyboard.press("ArrowRight");
+    await expect(blocked.getByText("おわり！", { exact: true })).toBeVisible();
+  } finally { await context.close(); }
+});
