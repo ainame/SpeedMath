@@ -8,14 +8,14 @@ Presenter（子どもの画面）が出題・順序・進行・計時・記録�
 
 - Cloudflare アカウントは 1 件、`cf` と Cloudflare MCP はこの端末で認証済み。GitHub CLI も認証済み。Workers のサブドメインは `ainame-apps.workers.dev`。
 - ステージング Worker `speedmath-staging` は作成済みで、未デプロイ・workers.dev 無効。公開後の候補 URL は `https://speedmath-staging.ainame-apps.workers.dev`。これは稼働確認済み URL ではない。
-- GitHub repository secret `CLOUDFLARE_ACCOUNT_ID` は設定済み。`CLOUDFLARE_STAGING_API_TOKEN` は本人による登録待ち。staging 専用 secret は現在の本番 workflow では使われないため、実装時に staging 用の job / Environment と接続する。本番用 `CLOUDFLARE_API_TOKEN` は別途必要。
+- GitHub repository secret `CLOUDFLARE_ACCOUNT_ID` は設定済み。`CLOUDFLARE_STAGING_API_TOKEN` も登録済み（`speedmath-staging` に限定した Workers Editor）。Secret の存在のみ確認しており、デプロイによる権限検証は未実施。staging 専用 secret は現在の本番 workflow では使われないため、実装時に staging 用の job / Environment と接続する。本番用 `CLOUDFLARE_API_TOKEN` は別途必要。
 - Workers 画面に requests 0 / 100,000 per day と表示されていたが、請求情報 API は権限不足のためプラン未確認。必要に応じて本人が Dashboard で確認する。
 
 ## 実装前に本人が済ませること
 
 - [ ] Cloudflare Dashboard で対象アカウント、Workers の利用可否、利用プランを確認する。初回の `workers.dev` サブドメイン設定が必要なら済ませる。既存設定上の本番名は `speedmath`、ステージング名の候補は `speedmath-staging`。実装担当に使ってよいアカウントとステージング名を伝える。カスタムドメインは使う場合に設定する。
 - [ ] Codex が使う環境に Cloudflare 認証を用意する。同一端末なら `pnpm exec cf auth login` でブラウザー承認し、`pnpm exec cf auth whoami` で対象アカウントを確認する。別の実行環境や CI では対象アカウントに制限したデプロイ権限のトークンを安全に設定する。新規 Worker と DO の作成が必要なら、その権限も対象アカウントで確認する。値はチャットやリポジトリに書かない。認証なしでローカル実装・テスト・dry run を進められる。[cf の認証](https://developers.cloudflare.com/cf/get-started/)・[CI での認証](https://developers.cloudflare.com/cf/ci/)
-- [ ] GitHub Actions から公開する前に `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を GitHub Secrets に登録する。現行の `.github/workflows/deploy.yml` はリポジトリ secrets を参照する。ステージングと本番の環境別 secrets を使う場合は、それぞれの Environment を参照するよう workflow も更新する。2026-11-14 時点では `CLOUDFLARE_ACCOUNT_ID` のみ登録済み。ステージング token は `CLOUDFLARE_STAGING_API_TOKEN` として登録し、対応する job が読むようにする。
+- [ ] GitHub Actions から公開する前に `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を GitHub Secrets に登録する。現行の `.github/workflows/deploy.yml` はリポジトリ secrets を参照する。ステージングと本番の環境別 secrets を使う場合は、それぞれの Environment を参照するよう workflow も更新する。2026-11-14 時点で `CLOUDFLARE_ACCOUNT_ID` とステージング専用の `CLOUDFLARE_STAGING_API_TOKEN` は登録済み。対応する staging job が後者を読むようにし、本番用 token は別途設定する。
 - [ ] 実機受け入れ用に iPhone と別端末を用意する。別回線での確認には Wi-Fi とモバイル回線を使う。旧 GitHub Pages URL の案内と停止時期を本番切替前に決める。ステージングへの公開範囲を共有し、本番公開・旧サイト停止はそれぞれ実行前に本人の指示を確認する。既存 localStorage のデータはオリジンに紐づくので、新 URL には自動移行されない。必要に応じて移行の要否を判断する。
 
 ### セットアップ確認コマンド
