@@ -1,103 +1,51 @@
-<p align="center">
-  <a href="https://elementary.codes">
-    <img src="https://elementary-swift.github.io/assets/elementary-logo.svg" width="125px" alt="Elementary Logo">
-  </a>
-</p>
+# スピードけいさん (SpeedMath)
 
-# Minimal Vite Starter for ElementaryUI
+小学生向けのスピード計算（計算カード）アプリです。算数セットの計算カードと同じ 4 種類のデッキをシャッフルして 1 枚ずつ表示し、最後までの時間を計ります。
 
-A starter template for building web applications with [ElementaryUI](https://github.com/elementary-swift/elementary-ui) powered by [Vite](https://vite.dev/).
+**▶ https://ainame.github.io/SpeedMath/**
 
-Click **Use this template** on GitHub or check the [docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) about using templates.
+Swift で書かれていて、WebAssembly としてブラウザで動きます。
 
-<p align="center">
-  <img src="https://elementary-swift.github.io/assets/vite-starter-split-screen.gif" alt="Elementary Demo Split Screen">
-</p>
+## つかいかた
 
-## Getting Started
+1. デッキを選ぶ
+2. 枚数（45 まい / ぜんぶ）、タイマーの表示、0 の計算を入れるかを選ぶ
+3. 「スタート！」→ カードの答えを口で言って、合っていたら次へ
 
-You can use [degit](https://github.com/Rich-Harris/degit) to scaffold a local project.
-```sh
-npx degit elementary-swift/starter-vite my-swift-web-app
-cd my-swift-web-app
-```
-or simply clone it:
-```sh
-git clone https://github.com/elementary-swift/starter-vite.git my-swift-web-app
-```
+| 操作 | キーボード | タッチ |
+|---|---|---|
+| つぎ | → / スペース | 画面の右半分をタップ |
+| まえ | ← | 画面の左半分をタップ |
 
-## Development Environment
+スマホは横向きで使う想定です。タイマーを「かくす」にしても時間は計っていて、最後に表示されます。
 
-### Option 1: Native Install
+## デッキ
 
-**Prerequisites:**
-- Swift 6.4+ with matching Swift SDK for WebAssembly ([swift.org](https://www.swift.org/documentation/articles/wasm-getting-started.html))
-- Node.js 22+ ([nodejs.org](https://nodejs.org/en/download))
-- wasm-opt (optional, [homebrew](https://formulae.brew.sh/formula/binaryen) or [manual](https://github.com/WebAssembly/binaryen/releases))
+| デッキ | 範囲 | 枚数（0 なし / 0 あり） |
+|---|---|---|
+| たしざん くりあがり なし | 1+1 〜 9+1（0 ありで 1+0 〜 9+0 も） | 45 / 54 |
+| ひきざん くりさがり なし | 2−1 〜 10−9（0 ありで 1−1 〜 9−9 も） | 45 / 54 |
+| たしざん くりあがり あり | 2+9 〜 9+9 | 36 |
+| ひきざん くりさがり あり | 11−2 〜 18−9 | 36 |
+
+## 開発
+
+- [ElementaryUI](https://github.com/elementary-swift/elementary-ui)
+- [elementary-router](https://github.com/ainame/elementary-router)（実験的なルーター、ハッシュルーティング）
+- [Vite](https://vite.dev/) + [vite-plugin-swift-wasm](https://github.com/elementary-swift/vite-plugin-swift-wasm)
+
+必要なもの: Swift 6.4 と同じバージョンの Swift SDK for WebAssembly、Node.js 22 以上、（任意）wasm-opt
 
 ```sh
 npm install
+npm run dev      # 開発サーバー（Swift の変更でホットリロード）
+npm run build    # リリースビルド（Embedded Swift）
 ```
 
-### Option 2: Dev Containers
+`main` に push すると GitHub Actions で GitHub Pages にデプロイされます。
 
-**Prerequisites:**
-- [Docker](https://www.docker.com)
-- [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension for VS Code or any compatible editor
+[elementary-swift/starter-vite](https://github.com/elementary-swift/starter-vite) テンプレートから作成しました。
 
-Open the project folder in your editor and run the "Dev Containers: Reopen in Container" command. The initial build may take several minutes.
+## ライセンス
 
-## Verify Installation
-
-```sh
-# Verify Swift toolchain
-swift --version
-# look for a compiler tag like this: (swift-6.4.2-RELEASE)
-
-# Verify Swift SDK for WebAssembly
-swift sdk list
-# should contain matching entries, eg: swift-6.4.2-RELEASE_wasm and swift-6.4.2-RELEASE_wasm-embedded
-```
-
-## Develop
-
-```sh
-# Start development server with hot reload
-npm run dev
-```
-
-Runs an initial debug build of the WebAssembly app in the browser. Swift files are watched and trigger an instant rebuild/reload on save.
-
-## Deploying
-
-```sh
-# Build in release and bundle for deployment
-npm run build
-
-# Preview the built web app locally
-npm run preview
-```
-
-## Configuration
-
-The template comes with a [Vite config](vite.config.ts) that uses *Embedded Swift* for release builds.
-
-```ts
-// vite.config.ts
-import { defineConfig } from "vite";
-import swiftWasm from "@elementary-swift/vite-plugin-swift-wasm";
-
-export default defineConfig({
-  plugins: [
-    swiftWasm({
-      useEmbeddedSDK: true,
-    }),
-  ],
-});
-```
-
-For all configuration options, visit the plugin's homepage: [vite-plugin-swift-wasm](https://github.com/elementary-swift/vite-plugin-swift-wasm).
-
-## License
-
-[0BSD License](LICENSE) - use it freely with no attribution required.
+[MIT](LICENSE)
