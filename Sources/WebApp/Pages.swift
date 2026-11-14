@@ -17,12 +17,14 @@ struct HomePage {
 
       h2(.class("step")) { "2. なんまい やる？" }
       div(.class("chips")) {
-        for option in PlaySettings.countOptions {
-          Chip(
-            label: option == 0 ? "ぜんぶ（\(settings.deck.cards.count)まい）" : "\(option)まい",
-            isSelected: settings.count == option
-          ) { settings.count = option }
+        // 45 is offered only for decks larger than that; on the 36-card decks it equals "all".
+        if settings.deck.cards.count > 45 {
+          Chip(label: "45まい", isSelected: settings.count == 45) { settings.count = 45 }
         }
+        Chip(
+          label: "ぜんぶ（\(settings.deck.cards.count)まい）",
+          isSelected: settings.count <= 0 || settings.count >= settings.deck.cards.count
+        ) { settings.count = 0 }
       }
 
       h2(.class("step")) { "3. タイマー" }
@@ -138,7 +140,7 @@ struct PlaySession {
       case .finished:
         div(.class("finished")) {
           p(.class("finished-title")) { "おわり！" }
-          p(.class("finished-time")) { formatElapsed(elapsed) }
+          p(.class("finished-time")) { ClockDisplay(milliseconds: elapsed) }
           p { "\(cards.count)まい できたね" }
           button(.type(.button), .class("big-button")) { "もういちど" }
             .onClick { phase = .ready }
@@ -198,7 +200,7 @@ struct LiveTimer {
   @State var now: Double = 0
 
   var body: some View {
-    span(.class("timer")) { formatElapsed(now - startedAt) }
+    ClockDisplay(milliseconds: now - startedAt)
       .attach(BrowserListener.interval(milliseconds: 100) { now = Browser.now() })
   }
 }
@@ -216,3 +218,19 @@ struct NotFoundPage {
     }
   }
 }
+
+/// Shows elapsed time as `mm:ss.s`. Every glyph sits in a fixed-width cell, so the layout never
+/// shifts as digits change, regardless of whether the font has tabular figures.
+@View
+struct ClockDisplay {
+  let milliseconds: Double
+
+  var body: some View {
+    span(.class("clock")) {
+      for glyph in ClockGlyph.glyphs(milliseconds: milliseconds) {
+        span(.class(glyph.isDigit ? "clock-digit" : "clock-separator")) { glyph.text }
+      }
+    }
+  }
+}
+

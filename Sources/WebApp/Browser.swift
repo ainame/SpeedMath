@@ -115,17 +115,22 @@ extension View {
   }
 }
 
-/// Formats milliseconds for kids, e.g. "12.3 びょう" or "1 ぷん 5.3 びょう".
-func formatElapsed(_ milliseconds: Double) -> String {
-  let tenths = Int(max(0, milliseconds) / 100)
-  let minutes = tenths / 600
-  let secondsTenths = tenths % 600
-  let seconds = "\(secondsTenths / 10).\(secondsTenths % 10) びょう"
-  guard minutes > 0 else { return seconds }
-  let unit: String
-  switch minutes % 10 {
-  case 1, 3, 6, 8, 0: unit = "ぷん"
-  default: unit = "ふん"
+/// One character cell of the `mm:ss.s` clock.
+struct ClockGlyph {
+  let text: String
+  let isDigit: Bool
+
+  /// Splits milliseconds into `m m : s s . t`, capped at 99:59.9.
+  static func glyphs(milliseconds: Double) -> [ClockGlyph] {
+    let tenths = min(Int(max(0, milliseconds) / 100), 99 * 600 + 599)
+    let minutes = tenths / 600
+    let seconds = (tenths % 600) / 10
+    func digit(_ value: Int) -> ClockGlyph { ClockGlyph(text: "\(value)", isDigit: true) }
+    func separator(_ text: String) -> ClockGlyph { ClockGlyph(text: text, isDigit: false) }
+    return [
+      digit(minutes / 10), digit(minutes % 10), separator(":"),
+      digit(seconds / 10), digit(seconds % 10), separator("."),
+      digit(tenths % 10),
+    ]
   }
-  return "\(minutes) \(unit) \(seconds)"
 }

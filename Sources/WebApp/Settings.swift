@@ -4,9 +4,9 @@ import Reactivity
 @Reactive
 final class PlaySettings {
   /// Card counts offered on the home screen; `0` means the whole deck.
-  static let countOptions = [10, 20, 30, 0]
+  static let countOptions = [45, 0]
 
   var deck: Deck = .additionNoCarry
-  var count: Int = 10
+  var count: Int = 45
   var showTimer: Bool = true
 }
