@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+import { join } from "node:path";
+
+const mode = process.argv[2] ?? "staging";
+const output = ".cloudflare/output/v0";
+const dir = join(output, "workers/default");
+const readJSON = async path => JSON.parse(await readFile(path, "utf8"));
+const config = await readJSON(join(output, "config.json"));
+assert.equal(config.buildContext.mode, mode);
+const worker = await readJSON(join(dir, "worker.config.json"));
+assert.equal(worker.name, mode.startsWith("production") ? "speedmath" : "speedmath-staging");
+assert.deepEqual(worker.assets.runWorkerFirst, ["/api/*"]);
+assert.equal(worker.env.REMOTE_ENABLED.value, !mode.endsWith("-solo"));
+for (const name of ["SessionObject", "CodeShard"]) assert.equal(worker.exports[name].storage, "sqlite");
+const logic = Object.entries(worker.manifest.modules).find(([, m]) => m.type === "wasm")?.[0];
+assert.ok(logic);
+const bytes = await readFile(join(dir, "bundle", logic));
+const module = new WebAssembly.Module(bytes);
+assert.deepEqual(WebAssembly.Module.imports(module), []);
+assert.equal(new WebAssembly.Instance(module).exports.protocol_version(), 1);
+const app = (await readdir(join(dir, "assets/assets"))).find(name => /^WebApp-.*\.wasm$/.test(name));
+assert.ok(app);
+console.log(`${worker.name} (${mode}): Worker Wasm ${bytes.length} B; browser Wasm ${(await readFile(join(dir, "assets/assets", app))).length} B`);

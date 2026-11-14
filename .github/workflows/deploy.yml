@@ -1,16 +1,23 @@
-name: Deploy to Cloudflare Workers
+name: Verify and deploy SpeedMath
 
 on:
   push:
+    branches: ["main", "staging", "codex/**"]
+  pull_request:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        options: [validate, staging, production]
+        default: validate
 
 permissions:
   contents: read
 
 # Only the latest push matters: a newer run cancels any queued or in-progress one.
 concurrency:
-  group: "cloudflare-deploy"
+  group: "${{ github.workflow }}-${{ github.ref }}-${{ inputs.target || github.event_name }}"
   cancel-in-progress: true
 
 jobs:
@@ -23,8 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Install binaryen (wasm-opt), curl and zstd
-        run: apt-get update && apt-get install -y binaryen curl zstd
+      - name: Install build tools
+        run: apt-get update && apt-get install -y binaryen curl zstd python3
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
@@ -36,7 +43,9 @@ jobs:
           curl -fsSL -o /tmp/wasm-sdk.artifactbundle.tar.gz "$WASM_SDK_URL"
           echo "$WASM_SDK_CHECKSUM  /tmp/wasm-sdk.artifactbundle.tar.gz" | sha256sum -c -
           swift sdk install /tmp/wasm-sdk.artifactbundle.tar.gz
-          swift sdk list
+          swift sdk list | tee /tmp/speedmath-sdks
+          grep -Fx swift-6.4.2-RELEASE_wasm-embedded /tmp/speedmath-sdks
+          command -v wasm-ld
       # Most of a cold build is compiling swift-syntax for the macros. Caching `.build` keyed on the
       # resolved dependencies lets later runs rebuild only the app and the libraries that changed.
       - name: Cache SwiftPM build
@@ -48,8 +57,69 @@ jobs:
             swiftpm-build-swift-6.4.2-
       - name: Install dependencies
         run: swift package resolve && pnpm install --frozen-lockfile
-      - name: Build
-        run: pnpm exec cf build
+      - name: Test Swift
+        run: swift test
+      - name: Check generated licenses
+        run: python3 Scripts/generate-licenses.py && git diff --exit-code -- public/licenses.html
+      - name: Build and inspect staging bundle
+        run: |
+          pnpm exec cf build --mode staging
+          pnpm exec node Scripts/check-build.mjs staging
+          pnpm exec cf deploy --prebuilt --mode staging --dry-run
+      - name: Run browser and local Worker tests
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright test
+      - name: Build production bundle
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.target == 'production')
+        run: |
+          pnpm exec cf build --mode production
+          pnpm exec node Scripts/check-build.mjs production
+      - name: Save validated bundle
+        if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.target == 'production')) || (github.ref == 'refs/heads/staging' && (github.event_name == 'push' || inputs.target == 'staging'))
+        uses: actions/upload-artifact@v7
+        with:
+          name: deploy-bundle
+          path: .cloudflare/output
+          include-hidden-files: true
+
+  staging:
+    needs: build
+    if: github.ref == 'refs/heads/staging' && (github.event_name == 'push' || inputs.target == 'staging')
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: deploy-bundle
+          path: .cloudflare/output
+      - name: Deploy to staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_STAGING_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm exec node Scripts/check-build.mjs staging
+          pnpm exec cf deploy --prebuilt --mode staging
+
+  production:
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.target == 'production')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: deploy-bundle
+          path: .cloudflare/output
       - name: Deploy to Cloudflare Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -55,3 +55,27 @@ Cloudflare CLI は beta です。`pnpm exec cf auth login` でログイン後、
 ## ライセンス
 
 [MIT](LICENSE)
+
+## リモコン
+
+1. こどものがめんでカードをえらび、プレイ画面の「リモコン」をひらきます。
+2. べつの端末で QR コードを読むか、トップの「リモコン」をひらいて表示されたコードを入れます。
+3. 両方の画面の文字が同じなら、こどものがめんで「つなぐ」をおします。答えと「まえ」「つぎ」はリモコン側に出ます。
+4. 接続が切れても、こどものがめんではそのまま遊べます。リモコンからの操作を止めるには「リモコンを はずす」をおします。
+
+招待は 2 分、切断後の再接続の猶予は 10 分です。記録とスタンプはこどものがめんに残ります。リモコンには同じサイトの Worker が必要です。
+
+### 検証とステージング
+
+```sh
+swift test
+pnpm exec cf build --mode staging
+pnpm exec node Scripts/check-build.mjs staging
+pnpm exec cf deploy --prebuilt --mode staging --dry-run
+pnpm exec playwright install chromium
+pnpm exec playwright test
+```
+
+作業ブランチと PR の CI はテストと dry run を行います。ステージングへの公開は `staging` ブランチだけが対象で、`CLOUDFLARE_STAGING_API_TOKEN` を使います。本番への公開は `main` だけが対象です。
+
+ステージングでリモコンを止める場合は `cf build --mode staging-solo` で、SQLite のクラスを保持した一人プレイ用の成果物を作ります。 `node Scripts/check-build.mjs staging-solo` と `cf deploy --prebuilt --mode staging-solo --dry-run` で確認し、ステージングにだけ公開します。再開には `staging` 成果物を再公開します。旧サイトの停止や URL 切り替えは別の作業です。
