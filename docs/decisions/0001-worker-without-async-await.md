@@ -9,7 +9,8 @@ The project's rule is Swift everywhere, with JavaScript only for bridging. The b
 follows it: the remote-control client is Swift (`Sources/WebApp/RemoteLink.swift`), and
 `web/main.js` only bridges calls that can throw. The backend (the Worker and its two Durable
 Objects, `SessionObject` and `CodeShard`) was also fully ported to Swift. That port lives on the
-**`swift-worker` branch** (commit `33c50d2`) and passes the same test suites as `main`.
+**`swift-worker` branch** and passes the same test suites as `main` (see the update below for its
+current state).
 
 Cloudflare requires the module entry and the Durable Object classes to be JavaScript, so a Swift
 Worker always keeps a short forwarding shell in `worker/index.js`.
@@ -64,6 +65,34 @@ into a tiny import-free Wasm (`Scripts/build-worker-wasm.sh`, exports in
 `Sources/Worker/Exports.swift`) that `worker/protocol.js` calls. Anything that needs strings,
 arrays or allocation stays in JS, because the freestanding module has no heap.
 
+## Update: the `swift-worker` spike is close (2026-11-14)
+
+Later the same day the branch got much closer to the Free plan (commit `c99077b`):
+
+- **`async`/`await` works in Embedded Swift.** The failed spike above used
+  `installGlobalExecutor()` with a non-`async` `main`, which never runs tasks in Embedded. The
+  working pattern is an `async` `@main`, a file-level `typealias DefaultExecutorFactory =
+  JavaScriptEventLoop`, and `main` kept suspended (`await withUnsafeContinuation { _ in }`),
+  because a returning async `main` makes the Wasm reactor call `exit()`. `Deferred` is gone.
+- **Swift starts at module load.** Probes showed that module load costs 0 ms of request CPU
+  (Cloudflare bills it to isolate start-up), while starting Swift on the first request cost
+  6–16 ms, mostly V8 compiling Wasm functions on first call. The shell now starts Swift with
+  top-level `await` and calls a synchronous `warmUp()` so the shared helpers are compiled before
+  the first request. During start-up only, it gives WASI fixed random bytes (Workers forbid random
+  values at global scope) and instantiates the precompiled module synchronously (top-level `await`
+  must settle on microtasks).
+
+| Worker on staging | p50 | p95 | p99 | max | > 10 ms |
+| --- | --- | --- | --- | --- | --- |
+| JavaScript (`main`) | 0 ms | 1 ms | — | 2–3 ms | 0% |
+| Swift `async`, started on first request | 1 ms | 11 ms | 20 ms | 22 ms | 7% |
+| Swift `async`, started at load + warm-up (`c99077b`) | 1 ms | 7 ms | 10 ms | 16 ms | 1% |
+
+The remaining slow calls (6–16 ms) are the first run of the async Durable Object handlers
+(WebSocket messages, `reserve`, `create`), which cannot be warmed up at load. The branch's own
+decision record has the full measurements. The branch was forked before `eb55e2b` and `6de5dee`,
+so it needs a rebase onto `main` (shared `WireRules`, pairing panel polish) before it can merge.
+
 ## When to revisit
 
 Merge or rebase `swift-worker` when any of these becomes true:
@@ -71,11 +100,10 @@ Merge or rebase `swift-worker` when any of these becomes true:
 1. **The account moves to Workers Paid.** The cold-start CPU stops mattering. Consider also
    moving the Worker to the regular Wasm SDK and real `async`/`await`: give the Worker its own
    build so the browser app stays Embedded, and check cold-start CPU on staging in Workers Logs.
-2. **Embedded Swift can run concurrency in a Worker** (a new toolchain or JavaScriptKit release).
-   Recreate the spike: `JavaScriptEventLoop.installGlobalExecutor()` in `main`, then a `JSClosure`
-   returning `JSPromise.async { ... }.jsValue` that awaits `JSPromise(...).value`. It must resolve.
-3. **Cold start gets cheaper**: rerun the staging measurement above with the branch; the target
-   is under 10 ms at p99.
+2. **The branch's first-call cost drops reliably under 10 ms**: for example by making the Durable
+   Object handlers mostly synchronous so `warmUp()` can compile them, or with a cheaper toolchain
+   or runtime. Rerun the staging measurement with the branch; the target is under 10 ms at p99
+   with no outliers.
 
 ### Interop rules learned on the branch
 
