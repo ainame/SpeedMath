@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- SpeedMath icon: a 計算カード dashing forward on the app's orange accent. Original artwork (MIT). -->
+  <rect width="512" height="512" rx="112" fill="#ff8a3d"/>
+  <g stroke="#fff" stroke-linecap="round" stroke-width="30">
+    <path d="M60 196h88" opacity=".9"/>
+    <path d="M36 262h110" opacity=".9"/>
+    <path d="M72 328h72" opacity=".9"/>
+  </g>
+  <g transform="rotate(8 318 262)">
+    <rect x="186" y="104" width="264" height="316" rx="44" fill="#fff"/>
+    <rect x="186" y="104" width="264" height="316" rx="44" fill="none" stroke="#f0e2b6" stroke-width="10"/>
+    <path d="M318 176v172M232 262h172" stroke="#e8504f" stroke-linecap="round" stroke-width="54"/>
+  </g>
+</svg>

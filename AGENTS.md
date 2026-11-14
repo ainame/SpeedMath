@@ -20,7 +20,7 @@ SpeedMath（スピードけいさん）は小学生向けの計算カードア�
 - `StampBook.swift`, `TodayRecords.swift`, `DailyStorage.swift`: per-day data in localStorage, reset at local midnight.
 - `Browser.swift`: JavaScriptKit helpers (time, random, key/interval listeners) and the clock formatting.
 - `index.html`: the whole stylesheet, plus `window.speedMathStorage` (localStorage wrapper with try/catch).
-- `public/stamps/*.svg`: original stamp artwork (part of this repo, MIT). `public/licenses.html`: generated third-party license page.
+- `public/stamps/*.svg`: original stamp artwork (part of this repo, MIT). `public/favicon.svg`: original app icon; regenerate `favicon-32.png` and the square, unrounded `apple-touch-icon.png` (180px) from it with `rsvg-convert`. `public/licenses.html`: generated third-party license page.
 - `Scripts/generate-licenses.py`: regenerates `public/licenses.html` from the dependency license files.
 
 ## Implementation Constraints
