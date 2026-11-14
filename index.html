@@ -11,6 +11,20 @@
       regions by flex ratios; text scales with the short side of the screen (vmin), and big things
       (cards, stamps, slots) size themselves from their region via container query units.
     */
+    /* Color theme: cream background, white surfaces, warm yellow lines, orange accent. */
+    :root {
+      --bg: #fffbea;
+      --surface: #ffffff;
+      --surface-pressed: #fff6d9;
+      --line: #f0e2b6;
+      --line-strong: #e3cf8f;
+      --text: #3a3226;
+      --text-muted: #8a7e66;
+      --accent: #ff8a3d;
+      --accent-pressed: #f27424;
+      --accent-soft: #fff0e3;
+      --stamp-ink: #d62f3a;
+    }
     html {
       height: 100%; overflow: hidden; overscroll-behavior: none;
       font-size: clamp(11px, calc(6px + 1.6vmin), 18px);
@@ -19,7 +33,7 @@
       height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none;
       display: flex; align-items: center; justify-content: center;
       font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
-      background: #fffbea; color: #333;
+      background: var(--bg); color: var(--text);
       touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     }
     a { color: inherit; text-decoration: none; }
@@ -57,7 +71,7 @@
     .deck {
       position: relative; min-height: 0; container-type: size;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
-      padding: 0.3em; border: 3px solid #f0e2b6; border-radius: 1.2em; background: #fff;
+      padding: 0.3em; border: 3px solid var(--line); border-radius: 1.2em; background: var(--surface);
       transition: border-color 0.15s, background-color 0.15s;
     }
     .deck.selected { border-color: var(--deck); background: var(--deck-soft); box-shadow: 0 0 0 1px var(--deck); }
@@ -75,15 +89,20 @@
     .deck-subtitle { font-size: clamp(0.7rem, min(12cqh, 12cqw), 1.3rem); font-weight: bold; }
     .deck-size { font-size: clamp(0.65rem, min(10cqh, 10cqw), 1.05rem); opacity: 0.7; }
     .chips { display: flex; flex-wrap: wrap; gap: 0.5em; }
-    .chip { padding: 0.5em 1.1em; border: 3px solid #e0c97a; border-radius: 999px; background: #fff; font-weight: bold; }
-    .chip.selected { background: #ffd84d; border-color: #e0a800; }
+    /* Chips follow the radio-card look: outlined; the selected one gets the accent border and tint. */
+    .chip {
+      padding: 0.5em 1.1em; border: 3px solid var(--line); border-radius: 999px;
+      background: var(--surface); color: var(--text); font-weight: bold;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+    .chip:active { background: var(--surface-pressed); }
+    .chip.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-pressed); }
 
     .home-start a, .big-button {
       display: inline-block; padding: 0.55em 2.2em; border: none; border-radius: 999px;
-      background: #ff8a3d; color: #fff; font-size: 1.5rem; font-weight: bold;
-      box-shadow: 0 5px 0 #d9661a;
+      background: var(--accent); color: #fff; font-size: 1.5rem; font-weight: bold;
     }
-    .home-start a:active, .big-button:active { transform: translateY(3px); box-shadow: 0 2px 0 #d9661a; }
+    .home-start a:active, .big-button:active { background: var(--accent-pressed); transform: scale(0.97); }
 
     .home-links {
       position: absolute; top: calc(4px + 1.5vmin); right: max(calc(8px + 2vmin), env(safe-area-inset-right));
@@ -108,7 +127,7 @@
     .clock { display: inline-flex; justify-content: center; font-variant-numeric: tabular-nums; }
     .clock-digit { display: inline-block; width: 0.66em; text-align: center; }
     .clock-separator { display: inline-block; width: 0.36em; text-align: center; }
-    .progress .clock { padding: 0.15em 0.7em; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 3px #e0c97a; font-size: 1.2rem; }
+    .progress .clock { padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--line); font-size: 1.2rem; }
 
     .card-area { flex: 1; min-height: 0; position: relative; container-type: size; }
     .card {
@@ -135,7 +154,7 @@
     .card-arrow-next { right: 14px; }
     .card-arrow-previous::before { transform: translate(-30%, -50%) rotate(135deg); }
     .card-arrow-next::before { transform: translate(-70%, -50%) rotate(-45deg); }
-    .hint { font-size: 0.85rem; opacity: 0.7; }
+    .hint { font-size: 0.85rem; color: var(--text-muted); }
     .hint-touch { display: none; }
     @media (hover: none) and (pointer: coarse) {
       .hint-keys { display: none; }
@@ -156,8 +175,8 @@
     @media (prefers-reduced-motion: reduce) { .stamp { animation: none; } }
     .finished-info { display: flex; flex-direction: column; align-items: center; gap: 0.5em; }
     .finished-title { font-size: 1.8rem; font-weight: bold; }
-    .finished-time { font-size: 2.4rem; font-weight: bold; color: #ff8a3d; }
-    .finished-stamp { font-weight: bold; color: #d62f3a; }
+    .finished-time { font-size: 2.4rem; font-weight: bold; color: var(--accent); }
+    .finished-stamp { font-weight: bold; color: var(--stamp-ink); }
 
     /* ---------- Stamp card: slots sized to fit the region ---------- */
     .stamp-card { text-align: center; gap: 1.5vmin; }
@@ -167,16 +186,16 @@
       flex: 1; min-height: 0; container-type: size;
       display: grid; grid-template-columns: repeat(var(--cols), auto);
       gap: var(--gap); justify-content: center; align-content: center;
-      border-radius: 1.2rem; background: #fff; box-shadow: inset 0 0 0 3px #e0c97a;
+      border-radius: 1.2rem; background: var(--surface); border: 3px solid var(--line);
     }
     /* Container units resolve against .stamp-slots here, so each slot fits the panel. */
     .stamp-slot {
       --slot: min(calc((100cqh - var(--gap) * (var(--rows) + 1)) / var(--rows)), calc((100cqw - var(--gap) * (var(--cols) + 1)) / var(--cols)));
       width: var(--slot); height: var(--slot);
-      box-sizing: border-box; border-radius: 50%; border: 3px dashed #ecd99a;
+      box-sizing: border-box; border-radius: 50%; border: 3px dashed var(--line-strong);
       display: flex; align-items: center; justify-content: center;
     }
-    .stamp-slot-number { font-size: 1.3rem; font-weight: bold; color: #e0c97a; }
+    .stamp-slot-number { font-size: 1.3rem; font-weight: bold; color: var(--line-strong); }
     .stamp-slot-image { width: 100%; transform: rotate(var(--tilt, -8deg)) scale(1.08); }
     .stamp-card-message { font-weight: bold; }
 
@@ -192,7 +211,7 @@
     /* Outlined list items (Material 3 anatomy): leading avatar, headline + supporting text, trailing value. */
     .record-row {
       flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.8em;
-      padding: 0.55em 1em 0.55em 0.6em; border: 2.5px solid #f0e2b6; border-radius: 1.4em; background: #fff; text-align: left;
+      padding: 0.55em 1em 0.55em 0.6em; border: 2.5px solid var(--line); border-radius: 1.4em; background: var(--surface); text-align: left;
     }
     .record-avatar {
       width: 2em; height: 2em; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -200,8 +219,8 @@
     }
     .record-text { min-width: 0; display: flex; flex-direction: column; gap: 0.15em; }
     .record-headline { font-weight: bold; color: var(--deck); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .record-supporting { font-size: 0.85rem; opacity: 0.65; font-variant-numeric: tabular-nums; }
-    .record-row .clock { font-size: 1.3rem; font-weight: bold; color: #ff8a3d; }
+    .record-supporting { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .record-row .clock { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
     .records-summary { font-weight: bold; min-height: 1.2em; }
 
     .not-found { align-items: center; justify-content: center; gap: 1em; }
@@ -209,13 +228,12 @@
     /* Secondary actions look like app buttons, not web links. */
     .progress-side a, .back a, .not-found a, .home-links a {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 0.4em 1.1em; border-radius: 999px; background: #fff;
-      box-shadow: 0 3px 0 #e0c97a, inset 0 0 0 2px #e0c97a;
+      padding: 0.35em 1.1em; border: 2.5px solid var(--line); border-radius: 999px; background: var(--surface);
       font-size: 0.95rem; font-weight: bold; user-select: none; -webkit-user-select: none;
     }
     .progress-side a { padding: 0.25em 0.9em; }
     .progress-side a:active, .back a:active, .not-found a:active, .home-links a:active {
-      transform: translateY(2px); box-shadow: 0 1px 0 #e0c97a, inset 0 0 0 2px #e0c97a;
+      background: var(--surface-pressed);
     }
 
     /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
