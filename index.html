@@ -413,6 +413,10 @@
 
     /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
     @media (orientation: portrait) {
+      /* Too narrow for buttons beside the title: the button row (リモコン left, きろく and
+         スタンプ right) comes first and the title gets its own row below it. */
+      .app:has(.home) .app-header { grid-template-columns: 1fr; row-gap: 0.6em; }
+      .app:has(.home) .header-remote { justify-self: start; }
       .home-options { grid-template-columns: 1fr; row-gap: 1.5vmin; }
       .deck-grid { grid-template-columns: repeat(2, 1fr); }
       .finished { flex-direction: column; gap: 2vmin; }
