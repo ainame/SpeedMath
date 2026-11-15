@@ -50,14 +50,17 @@ jobs:
           swift sdk list | tee /tmp/speedmath-sdks
           grep -Fx swift-6.4.2-RELEASE_wasm-embedded /tmp/speedmath-sdks
           command -v wasm-ld
-      # Most of a cold build is compiling swift-syntax for the macros. Caching `.build` keyed on the
-      # resolved dependencies lets later runs rebuild only the app and the libraries that changed.
+      # Most of a cold build is compiling swift-syntax for the macros (about 6 minutes in the
+      # release build alone). actions/cache never overwrites an existing key, so the key ends in the
+      # commit: every run saves its `.build` (debug and release products) and the next run restores
+      # the latest one for the same dependencies, rebuilding only the app modules that changed.
       - name: Cache SwiftPM build
         uses: actions/cache@v6
         with:
           path: .build
-          key: swiftpm-build-swift-6.4.2-${{ hashFiles('Package.resolved') }}
+          key: swiftpm-build-swift-6.4.2-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
           restore-keys: |
+            swiftpm-build-swift-6.4.2-${{ hashFiles('Package.resolved') }}-
             swiftpm-build-swift-6.4.2-
       - name: Install dependencies
         run: swift package resolve && pnpm install --frozen-lockfile
