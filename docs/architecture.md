@@ -36,12 +36,12 @@ flowchart LR
 
 | Piece | Where | Language |
 | --- | --- | --- |
-| The app (both roles) | `Sources/WebApp`, `index.html` | Swift (Embedded Wasm) |
+| The app (both roles) | `Sources/WebApp`, `index.html`, `styles.css` | Swift (Embedded Wasm), CSS |
 | Shared pure models and rules | `Sources/ProtocolModels`, `Sources/SessionLogic` | Swift, no Foundation |
 | Browser API bindings and wrappers | `Sources/BrowserAPI` | Swift + BridgeJS |
 | Remote message codec | `Sources/RemoteProtocol` | Swift |
 | Wasm start-up and QR library injection | `web/main.js` | JS |
-| Worker and Durable Objects | `worker/index.js`, `worker/protocol.js` | JS (see [decision 0001](decisions/0001-worker-without-async-await.md)) |
+| Worker and Durable Objects | `worker/` (`index.js`, `session-object.js`, `code-shard.js`, `shared.js`, `protocol.js`) | JS (see [decision 0001](decisions/0001-worker-without-async-await.md)) |
 | Integer rules for the Worker | `Sources/Worker/Exports.swift` → `worker/generated/logic.wasm` | Swift, freestanding, no imports |
 | Build and deploy config | `cloudflare.config.ts`, `vite.config.ts`, `.github/workflows/deploy.yml` | TS / YAML |
 
@@ -77,7 +77,9 @@ flowchart LR
   which browsers never send to the server, and the app needs no link-interception script.
 - `AppShell.swift`: header (home-screen-only リモコン button / 「リモコン ✓」 indicator) and the
   pairing panel overlay.
-- `Pages.swift`: home, play session (ready → playing → finished), stamps and records.
+- One file per screen: `HomePage`, `PlayPage` (ready → playing → finished), `StampsPage`,
+  `RecordsPage`, `NotFoundPage`; the Remote's screens are `RemotePage`, the child's pairing panel
+  `PairingPanel`.
 - Per-day data (stamps, records) lives in localStorage through `DailyStorage`, a small JSON codec
   on `BrowserPage.localValue`, and resets at local midnight.
 

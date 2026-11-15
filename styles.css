@@ -1,0 +1,412 @@
+/* SpeedMath stylesheet, linked from index.html and bundled by Vite. */
+/*
+  App-style layout: the page never scrolls. Every screen fills the viewport and splits it into
+  regions by flex ratios; text scales with the short side of the screen (vmin), and big things
+  (cards, stamps, slots) size themselves from their region via container query units.
+*/
+/* Color theme: cream background, white surfaces, warm yellow lines, orange accent. */
+:root {
+  --bg: #fffbea;
+  --surface: #ffffff;
+  --surface-pressed: #fff6d9;
+  --line: #f0e2b6;
+  --line-strong: #e3cf8f;
+  --text: #3a3226;
+  --text-muted: #8a7e66;
+  --accent: #ff8a3d;
+  --accent-pressed: #f27424;
+  --accent-soft: #fff0e3;
+  --stamp-ink: #d62f3a;
+  /* Safe-area insets (notch, home indicator) for home-screen/standalone use. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --pad-y: calc(4px + 1.5vmin);
+  --pad-x: calc(8px + 2vmin);
+}
+html {
+  height: 100%; overflow: hidden; overscroll-behavior: none;
+  font-size: clamp(11px, calc(6px + 1.6vmin), 18px);
+}
+/* iOS can leave the document scrolled after a rotation even with overflow: hidden, so the
+   body is pinned to the viewport. */
+body {
+  position: fixed; inset: 0;
+  height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+/* No zooming anywhere: pan-x/pan-y keep scrolling (records list) but drop pinch and double-tap zoom. */
+*, *::before, *::after { touch-action: pan-x pan-y; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+p, h1, h2 { margin: 0; }
+
+.app {
+  position: relative; box-sizing: border-box;
+  width: 100%; max-width: 820px; height: 100dvh;
+  padding:
+    calc(var(--pad-y) + var(--safe-top)) max(var(--pad-x), var(--safe-right))
+    max(var(--pad-y), var(--safe-bottom)) max(var(--pad-x), var(--safe-left));
+  display: flex; flex-direction: column; gap: 1.5vmin; overflow: hidden;
+}
+/* On desktop browsers keep a phone-like panel instead of stretching to the window. */
+@media (hover: hover) and (pointer: fine) { .app { max-height: 640px; } }
+/* Header: the remote control button sits left of the title, on the home screen only. */
+.app-header { display: grid; grid-template-columns: minmax(max-content, 1fr) auto 1fr; align-items: center; gap: 0.5em; }
+.header-remote { visibility: hidden; }
+.app:has(.home) .header-remote { visibility: visible; }
+.header-remote .chip { padding: 0.3em 0.9em; font-size: 0.95rem; }
+.app-header h1 { font-size: 1.5rem; text-align: center; line-height: 1.3; }
+.app-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.app-main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* The play screen is full-screen: no app title. */
+.app:has(.play) .app-header { display: none; }
+
+/* Deck colors follow the common 計算カード convention. */
+.deck-red { --deck: #e8504f; --deck-soft: #fde4e3; }
+.deck-blue { --deck: #3a7bd5; --deck-soft: #e0ecfb; }
+.deck-yellow { --deck: #e3a90e; --deck-soft: #fdf2cf; }
+.deck-green { --deck: #2e9e5b; --deck-soft: #dcf3e5; }
+
+/* ---------- Home: options and start take their natural height; decks fill the rest ---------- */
+.home { gap: 1vmin; }
+.home-decks { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.home-options { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 3vmin; padding-top: 1.5vmin; }
+.home-start { flex: none; display: flex; align-items: center; justify-content: center; padding: 3vmin 0 2vmin; }
+.step { font-size: 1rem; line-height: 1.3; margin-bottom: 0.4em; }
+.deck-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 2vmin; padding-bottom: 4px; }
+/* Radio-card selection: outlined cards; the selected one gets its color border, a tint and a check. */
+.deck {
+  position: relative; min-height: 0; container-type: size;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25em;
+  padding: 0.3em; border: 3px solid var(--line); border-radius: 1.2em; background: var(--surface);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.deck.selected { border-color: var(--deck); background: var(--deck-soft); box-shadow: 0 0 0 1px var(--deck); }
+.deck-check {
+  display: none; position: absolute; top: 8cqh; right: 7cqh; width: 1.3em; height: 1.3em;
+  border-radius: 50%; background: var(--deck);
+}
+.deck-check::after {
+  content: ""; position: absolute; left: 50%; top: 45%; width: 0.28em; height: 0.55em;
+  border: solid #fff; border-width: 0 0.14em 0.14em 0; transform: translate(-50%, -50%) rotate(45deg);
+}
+.deck.selected .deck-check { display: block; }
+/* Deck text scales with the deck button itself. */
+.deck-title { font-size: clamp(0.9rem, min(24cqh, 21cqw), 2.4rem); font-weight: bold; color: var(--deck); line-height: 1.1; }
+.deck-subtitle { font-size: clamp(0.7rem, min(12cqh, 12cqw), 1.3rem); font-weight: bold; }
+.deck-size { font-size: clamp(0.65rem, min(10cqh, 10cqw), 1.05rem); opacity: 0.7; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5em; }
+/* Chips follow the radio-card look: outlined; the selected one gets the accent border and tint. */
+.chip {
+  padding: 0.5em 1.1em; border: 3px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--text); font-weight: bold;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.chip:active { background: var(--surface-pressed); }
+.chip.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-pressed); }
+
+.home-start a, .big-button {
+  display: inline-block; padding: 0.55em 2.2em; border: none; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 1.5rem; font-weight: bold;
+}
+.home-start a:active, .big-button:active { background: var(--accent-pressed); transform: scale(0.97); }
+
+.home-links {
+  position: absolute; top: calc(var(--pad-y) + var(--safe-top)); right: max(var(--pad-x), var(--safe-right));
+  display: flex; gap: 0.5em;
+}
+.license-link {
+  position: fixed; right: max(10px, var(--safe-right)); bottom: max(4px, var(--safe-bottom));
+  font-size: 0.7rem; opacity: 0.45;
+}
+
+/* ---------- Play ---------- */
+.play { text-align: center; gap: 1.5vmin; }
+.ready, .finished { flex: 1; min-height: 0; }
+.ready { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1em; }
+.ready-deck { font-size: 1.5rem; font-weight: bold; }
+.ready-count { font-size: 1.2rem; }
+.progress { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 1.15rem; font-weight: bold; }
+.progress-side { display: flex; }
+.progress-side a { position: relative; z-index: 2; }
+.progress-timer { justify-content: flex-end; }
+/* Each clock glyph has a fixed cell width so mm:ss.s never shifts as digits change. */
+.clock { display: inline-flex; justify-content: center; font-variant-numeric: tabular-nums; }
+.clock-digit { display: inline-block; width: 0.66em; text-align: center; }
+.clock-separator { display: inline-block; width: 0.36em; text-align: center; }
+.progress .clock { padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--line); font-size: 1.2rem; }
+
+.card-area { flex: 1; min-height: 0; position: relative; container-type: size; }
+.card {
+  position: relative; box-sizing: border-box; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 1.2rem; border: calc(4px + 1vmin) solid var(--deck); background: #fff;
+  user-select: none; -webkit-user-select: none;
+  font-size: min(45cqh, 14cqw); font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Invisible halves of the whole screen: left = previous, right = next. */
+.tap-zone { position: fixed; top: 0; bottom: 0; width: 50%; z-index: 1; cursor: pointer; }
+.tap-previous { left: 0; }
+.tap-next { right: 0; }
+/* Round chevron badges inside the card edges, tinted with the deck color. */
+.card-arrow {
+  position: absolute; top: 50%; width: 44px; height: 44px; margin-top: -22px;
+  border-radius: 50%; background: var(--deck-soft); opacity: 0.9;
+}
+.card-arrow::before {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 12px; height: 12px; border: solid var(--deck); border-width: 0 5px 5px 0; border-radius: 2px;
+}
+.card-arrow-previous { left: 14px; }
+.card-arrow-next { right: 14px; }
+.card-arrow-previous::before { transform: translate(-30%, -50%) rotate(135deg); }
+.card-arrow-next::before { transform: translate(-70%, -50%) rotate(-45deg); }
+.hint { font-size: 0.85rem; color: var(--text-muted); }
+.hint-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .hint-keys { display: none; }
+  .hint-touch { display: block; }
+}
+
+/* Finished: stamp and results side by side, the stamp sized from the region. */
+.finished { container-type: size; display: flex; align-items: center; justify-content: center; gap: 5vmin; }
+.stamp {
+  height: min(85cqh, 42cqw); aspect-ratio: 1; transform: rotate(var(--tilt, -8deg));
+  animation: stamp-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes stamp-in {
+  0% { opacity: 0; transform: scale(2.4) rotate(calc(var(--tilt, -8deg) * 3)); }
+  70% { opacity: 1; transform: scale(0.93) rotate(calc(var(--tilt, -8deg) * 0.7)); }
+  100% { opacity: 1; transform: scale(1) rotate(var(--tilt, -8deg)); }
+}
+@media (prefers-reduced-motion: reduce) { .stamp { animation: none; } }
+.finished-info { display: flex; flex-direction: column; align-items: center; gap: 0.5em; }
+.finished-title { font-size: 1.8rem; font-weight: bold; }
+.finished-time { font-size: 2.4rem; font-weight: bold; color: var(--accent); }
+.finished-stamp { font-weight: bold; color: var(--stamp-ink); }
+
+/* ---------- Stamp card: slots sized to fit the region ---------- */
+.stamp-card { text-align: center; gap: 1.5vmin; }
+.stamp-card-title { font-size: 1.2rem; }
+.stamp-slots {
+  --cols: 3; --rows: 2; --gap: 2vmin;
+  flex: 1; min-height: 0; container-type: size;
+  display: grid; grid-template-columns: repeat(var(--cols), auto);
+  gap: var(--gap); justify-content: center; align-content: center;
+  border-radius: 1.2rem; background: var(--surface); border: 3px solid var(--line);
+}
+/* Container units resolve against .stamp-slots here, so each slot fits the panel. */
+.stamp-slot {
+  --slot: min(calc((100cqh - var(--gap) * (var(--rows) + 1)) / var(--rows)), calc((100cqw - var(--gap) * (var(--cols) + 1)) / var(--cols)));
+  width: var(--slot); height: var(--slot);
+  box-sizing: border-box; border-radius: 50%; border: 3px dashed var(--line-strong);
+  display: flex; align-items: center; justify-content: center;
+}
+.stamp-slot-number { font-size: 1.3rem; font-weight: bold; color: var(--line-strong); }
+.stamp-slot-image { width: 100%; transform: rotate(var(--tilt, -8deg)) scale(1.08); }
+.stamp-card-message { font-weight: bold; }
+
+/* ---------- Records: fixed page, scrollable list ---------- */
+.records { text-align: center; gap: 1.5vmin; }
+.records-title { font-size: 1.2rem; }
+.records-list {
+  flex: 1; min-height: 0; box-sizing: border-box; width: min(100%, 30em); align-self: center;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+  display: flex; flex-direction: column; gap: 0.5em; padding: 2px;
+}
+.records-empty { margin: auto; font-weight: bold; opacity: 0.7; }
+/* Outlined list items (Material 3 anatomy): leading avatar, headline + supporting text, trailing value. */
+.record-row {
+  flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.8em;
+  padding: 0.55em 1em 0.55em 0.6em; border: 2.5px solid var(--line); border-radius: 1.4em; background: var(--surface); text-align: left;
+}
+.record-avatar {
+  width: 2em; height: 2em; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--deck); color: #fff; font-size: 1.4rem; font-weight: bold; line-height: 1;
+}
+.record-text { min-width: 0; display: flex; flex-direction: column; gap: 0.15em; }
+.record-headline { font-weight: bold; color: var(--deck); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.record-supporting { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.record-row .clock { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+.records-summary { font-weight: bold; min-height: 1.2em; }
+
+.not-found { align-items: center; justify-content: center; gap: 1em; }
+
+/* Secondary actions look like app buttons, not web links. */
+.progress-side a, .back a, .not-found a, .home-links a {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0.35em 1.1em; border: 2.5px solid var(--line); border-radius: 999px; background: var(--surface);
+  font-size: 0.95rem; font-weight: bold; user-select: none; -webkit-user-select: none;
+}
+.progress-side a { padding: 0.25em 0.9em; }
+.progress-side a:active, .back a:active, .not-found a:active, .home-links a:active {
+  background: var(--surface-pressed);
+}
+
+.progress-timer { gap: 0.35em; align-items: center; }
+.remote-toggle { flex: none; position: relative; z-index: 2; }
+/* While paired the child sees the choices but the parent makes them. */
+.remote-wait { font-size: 1.1rem; font-weight: bold; color: var(--accent-pressed); }
+.deck:disabled, .chip:disabled { cursor: default; color: inherit; }
+.deck:disabled:not(.selected), .chips .chip:disabled:not(.selected) { opacity: 0.7; }
+.pair-panel {
+  position: absolute; z-index: 5;
+  inset: calc(var(--pad-y) + var(--safe-top)) max(var(--pad-x), var(--safe-right))
+    max(var(--pad-y), var(--safe-bottom)) max(var(--pad-x), var(--safe-left));
+  padding: 0.8em; border: 2.5px solid var(--line-strong); border-radius: 1.2em;
+  background: var(--surface); display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 0.6em; text-align: center; container-type: size;
+}
+.pair-heading, .pair-invite, .pair-help, .remote-actions {
+  display: flex; gap: 0.65em; align-items: center; justify-content: center;
+}
+.pair-invite { min-height: 0; }
+.pair-help { flex-direction: column; max-width: 23em; }
+.pair-qr { width: min(48cqh, 36cqw, 240px); image-rendering: pixelated; }
+.pair-code { font: bold 1.35rem ui-monospace, monospace; letter-spacing: 0.08em; white-space: nowrap; }
+.remote-actions .chip { min-width: 6em; min-height: 2.7em; }
+/* ---------- Remote: pairing form, then a full-screen controller ---------- */
+.remote-page { text-align: center; }
+.remote-pairing { justify-content: center; align-items: center; gap: clamp(8px, 2.5vmin, 18px); }
+.remote-lead { font-size: 1.15rem; font-weight: bold; }
+.remote-status { color: var(--text-muted); min-height: 1.3em; }
+.remote-offline { color: var(--accent-pressed); font-weight: bold; }
+.remote-notice { color: var(--accent-pressed); font-weight: bold; }
+.remote-check { font-size: 2.4rem; }
+.remote-code-field { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
+.remote-code-label { font-size: 0.9rem; color: var(--text-muted); font-weight: bold; }
+.remote-code-input {
+  box-sizing: border-box; width: min(15em, 86vw); padding: 0.45em 0.6em;
+  font: bold max(16px, 1.6rem) ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase;
+  text-align: center; color: var(--text); background: var(--surface);
+  border: 3px solid var(--line-strong); border-radius: 0.7em;
+}
+.remote-code-input:focus { outline: none; border-color: var(--accent); }
+.remote-code-input::placeholder { color: var(--line-strong); }
+
+/* The controller takes the whole screen; the title header is hidden. */
+.app:has(.remote-live) .app-header { display: none; }
+.remote-live { gap: 1.5vmin; }
+.remote-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 1.15rem; font-weight: bold; min-height: 2.2em; }
+.remote-bar .progress-side:first-child { justify-content: flex-start; }
+.remote-bar .clock {
+  padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface);
+  border: 2.5px solid var(--line); font-size: 1.3rem;
+}
+.remote-count { font-size: 1.3rem; }
+.remote-stage {
+  flex: 1; min-height: 0; display: grid; gap: 2vmin;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr) minmax(0, 1.25fr);
+}
+.remote-stage-idle { grid-template-columns: 1fr; }
+.remote-card {
+  min-width: 0; min-height: 0; container-type: size; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh;
+  border: calc(3px + 0.6vmin) solid var(--line-strong); border-radius: 1.2rem; background: var(--surface);
+  user-select: none; -webkit-user-select: none;
+}
+.remote-problem {
+  font-size: min(24cqh, 17cqw); font-weight: bold; line-height: 1.1;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.remote-answer {
+  display: flex; align-items: center; gap: 0.35em; padding: 0.1em 0.6em 0.1em 0.5em;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent-pressed);
+}
+.remote-answer-label { font-size: min(9cqh, 7cqw); font-weight: bold; }
+.remote-answer-value { font-size: min(26cqh, 19cqw); font-weight: bold; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.remote-message { font-size: min(14cqh, 9cqw); font-weight: bold; padding-inline: 0.5em; }
+.remote-final-time { font-size: min(20cqh, 12cqw); font-weight: bold; color: var(--accent); }
+.remote-move {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.2em; padding: 0.4em; border-radius: 1.2rem; font-weight: bold; container-type: size;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: background-color 0.1s, transform 0.1s;
+}
+.remote-move-arrow { font-size: min(34cqh, 48cqw); line-height: 1; }
+.remote-move-label { font-size: min(14cqh, 22cqw); }
+.remote-previous { border: 3px solid var(--line-strong); background: var(--surface); color: var(--text); }
+.remote-previous:active:not(:disabled) { background: var(--surface-pressed); transform: scale(0.97); }
+.remote-next { border: 3px solid var(--accent); background: var(--accent); color: #fff; }
+.remote-next:active:not(:disabled) { background: var(--accent-pressed); transform: scale(0.97); }
+.remote-move:disabled { opacity: 0.4; cursor: default; }
+.remote-footer { display: flex; align-items: center; justify-content: center; gap: 0.6em; min-height: 1.6em; font-size: 0.95rem; }
+
+/* Remote screens that mirror the child's home, ready and finished screens. */
+.remote-primary, .remote-secondary, .remote-small {
+  border-radius: 1.2rem; font-weight: bold; user-select: none; -webkit-user-select: none;
+  touch-action: manipulation; transition: background-color 0.1s, transform 0.1s;
+}
+.remote-primary { border: 3px solid var(--accent); background: var(--accent); color: #fff; font-size: 1.4rem; }
+.remote-primary:active:not(:disabled) { background: var(--accent-pressed); transform: scale(0.97); }
+.remote-secondary { border: 3px solid var(--line-strong); background: var(--surface); color: var(--text); font-size: 1.15rem; }
+.remote-secondary:active:not(:disabled) { background: var(--surface-pressed); transform: scale(0.97); }
+.remote-small { padding: 0.25em 0.9em; border: 2.5px solid var(--line); background: var(--surface); font-size: 0.95rem; border-radius: 999px; }
+.remote-primary:disabled, .remote-secondary:disabled, .remote-small:disabled, .remote-deck:disabled { opacity: 0.45; cursor: default; }
+.remote-row { display: flex; gap: 2vmin; min-height: 0; }
+.remote-row > button { flex: 1 1 0; min-height: 3.2em; }
+.remote-row > .remote-primary { flex-grow: 1.6; }
+.remote-ready { grid-template-rows: minmax(0, 1fr) auto; }
+.remote-sub { font-size: min(14cqh, 8cqw); font-weight: bold; color: var(--text-muted); }
+.remote-ready .remote-message { font-size: min(20cqh, 8cqw); }
+.remote-ready .remote-final-time { font-size: min(30cqh, 14cqw); }
+.remote-row > button { white-space: nowrap; padding: 0.3em 0.6em; font-size: clamp(1.1rem, 6.5vmin, 2.2rem); }
+.remote-start { font-size: clamp(1.3rem, 7vmin, 2.4rem); }
+
+.remote-home {
+  flex: 1; min-height: 0; display: grid; gap: 2vmin;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "decks options" "decks start";
+}
+.remote-decks { grid-area: decks; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 1.5vmin; }
+.remote-deck {
+  min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.1em; border: 3px solid var(--line); border-radius: 1rem; background: var(--surface); font-weight: bold;
+}
+.remote-deck.selected { border-color: var(--deck); background: var(--deck-soft); box-shadow: 0 0 0 1px var(--deck); }
+.remote-deck .deck-title { font-size: clamp(0.9rem, min(30cqh, 20cqw), 2rem); color: var(--deck); line-height: 1.1; }
+.remote-deck .deck-subtitle { font-size: clamp(0.65rem, min(15cqh, 11cqw), 1.05rem); }
+.remote-options { grid-area: options; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 1vmin; }
+.remote-option { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; }
+.remote-option-title { font-size: clamp(0.8rem, 3.6vmin, 1.1rem); font-weight: bold; color: var(--text-muted); min-width: 5.5em; text-align: left; }
+.remote-option .chip { padding: 0.35em 0.9em; font-size: clamp(0.95rem, 4.4vmin, 1.4rem); }
+.remote-start { grid-area: start; min-height: 2.6em; }
+@media (orientation: portrait) {
+  .remote-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 0.55fr);
+  }
+  .remote-stage-idle { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  .remote-ready { grid-template-rows: minmax(0, 1fr) auto; }
+  .remote-stage.remote-ready .remote-row { grid-column: 1 / -1; grid-row: 2; }
+  .remote-row > button { min-height: max(4.5rem, 20vh); }
+  .remote-home {
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-areas: "decks" "options" "start";
+  }
+  .remote-stage .remote-card { grid-column: 1 / -1; grid-row: 1; }
+  .remote-stage .remote-previous { grid-column: 1; grid-row: 2; }
+  .remote-stage .remote-next { grid-column: 2; grid-row: 2; }
+}
+@media (orientation: portrait) {
+  .pair-invite { flex-direction: column; }
+  .pair-qr { width: min(56cqw, 36cqh, 240px); }
+  .progress .clock { padding-inline: 0.3em; font-size: 0.95rem; }
+}
+
+/* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
+@media (orientation: portrait) {
+  /* Too narrow for buttons beside the title: the button row (リモコン left, きろく and
+     スタンプ right) comes first and the title gets its own row below it. */
+  .app:has(.home) .app-header { grid-template-columns: 1fr; row-gap: 0.6em; }
+  .app:has(.home) .header-remote { justify-self: start; }
+  .home-options { grid-template-columns: 1fr; row-gap: 1.5vmin; }
+  .deck-grid { grid-template-columns: repeat(2, 1fr); }
+  .finished { flex-direction: column; gap: 2vmin; }
+  .stamp { height: min(45cqh, 70cqw); }
+}
