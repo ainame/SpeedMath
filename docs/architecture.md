@@ -170,6 +170,7 @@ sequenceDiagram
 
 | Step | Command |
 | --- | --- |
+| Lint (Swift format, ESLint) | `pnpm run lint` (`pnpm run format` fixes Swift formatting) |
 | Swift unit tests (incl. `RemoteLink` with a fake environment) | `swift test` |
 | Build (Embedded Swift, Vite, Worker) | `pnpm exec cf build --mode staging` (or `production`) |
 | Check the build output | `pnpm exec node Scripts/check-build.mjs staging` |
@@ -194,5 +195,6 @@ machine with `pnpm exec cf deploy --prebuilt --mode staging`.
 
 - [decisions/0001-worker-without-async-await.md](decisions/0001-worker-without-async-await.md):
   why the Worker stays in JavaScript; the full Swift Worker is on the `swift-worker` branch.
-- `REMOTE-VERIFICATION.md`: what was verified, where, and what is still open.
-- `TODO.md`: the original remote-control plan and its checklist.
+- `history/remote-verification.md`: the first verification record (2026-11-14) and what was
+  still open then.
+- `history/remote-control-plan.md`: the original remote-control plan.

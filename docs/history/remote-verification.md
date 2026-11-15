@@ -1,5 +1,7 @@
 # リモコン検証記録
 
+> **記録（2026-11-14 時点）** — 当時の検証結果です。現在のテストと手順は [docs/architecture.md](../architecture.md) の「Build, test and deploy」を参照してください。ここに挙げた未確認事項のうち、iPhone 実機での確認と DO の退避・復元の実測は、まだ行っていません。
+
 2026-11-14、対象アプリは `d5a7ebb`（トップのボタンをタイトル左側に配置）。公開先は [speedmath-staging](https://speedmath-staging.ainame-apps.workers.dev/)。
 
 | 検証 | コマンドと結果 |

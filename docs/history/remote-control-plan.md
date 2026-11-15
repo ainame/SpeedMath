@@ -1,5 +1,7 @@
 # SpeedMath リモコン実装計画
 
+> **記録（2026-11-14 時点）** — リモコン機能の最初の実装計画です。その後、親がゲーム全体を操作する形（プロトコル v2）に変わり、Worker は JavaScript のまま残す判断をしました。現在の構成は [docs/architecture.md](../architecture.md)、判断は [decisions/0001](../decisions/0001-worker-without-async-await.md) を参照してください。
+
 Presenter（子どもの画面）が出題・順序・進行・計時・記録を管理する。大人が QR または手入力コードで Remote を接続し、Presenter の承認後に答えを確認しながら前後に進める。既存の一人プレイはネットワークなしで動く。
 
 [構成案の公開ページ](https://speedmath-remote-architecture.s-namai-09.chatgpt.site/) は計画作成時に HTTP 401 を返したため、公開用に保存していた HTML を参照した。Sites の管理情報では最新保存版は第 3 版で、手元の公開用ソースも第 3 版に対応する。ただし配信本文の直接取得はできなかった。以降のチェック項目は実装・検証の予定。
@@ -45,7 +47,7 @@ gh auth status
 
 ## Codex が進める実装
 
-進捗（2026-11-14、`codex/remote-control`）：チェック済みは実装とローカル・ステージングでの自動検証が済んだ項目。結果と未確認事項は [REMOTE-VERIFICATION.md](REMOTE-VERIFICATION.md) に記録。Worker は 1.5 の「同期的な Swift 関数境界」を採用し、DO・WebSocket・JSON は JS host、メッセージ種別の中継可否は Embedded Swift の `can_relay`（`Sources/Worker`）が判断する。未チェックの 4 項目は、hibernation の実測、分散した無効コード照会の評価、ログ・メトリクスの記録、本番切替が残っている。
+進捗（2026-11-14、`codex/remote-control`）：チェック済みは実装とローカル・ステージングでの自動検証が済んだ項目。結果と未確認事項は [remote-verification.md](remote-verification.md) に記録。Worker は 1.5 の「同期的な Swift 関数境界」を採用し、DO・WebSocket・JSON は JS host、メッセージ種別の中継可否は Embedded Swift の `can_relay`（`Sources/Worker`）が判断する。未チェックの 4 項目は、hibernation の実測、分散した無効コード照会の評価、ログ・メトリクスの記録、本番切替が残っている。
 
 機能実装は作業ブランチで進める。現行の workflow は `main` への push と手動実行で本番に公開するため、ステージングの初回公開前に CI の対象を分ける。PR は認証なしの検証とし、ステージングは対象を選んだ専用ジョブでデプロイする。ステージングの認証待ちでも、ローカルと PR の検証は続ける。
 

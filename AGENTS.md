@@ -33,7 +33,7 @@ How the pieces fit together (app, remote control protocol, Worker and Durable Ob
 - `public/stamps/*.svg`: original stamp artwork (part of this repo, MIT). `public/favicon.svg`: original app icon; regenerate `favicon-32.png` and the square, unrounded `apple-touch-icon.png` (180px) from it with `rsvg-convert`. `public/licenses.html`: generated third-party license page.
 - `Scripts/generate-licenses.py`: regenerates `public/licenses.html` from the dependency license files. `Scripts/check-build.mjs`: checks the `cf build` output.
 - `Tests/SessionLogicTests` and `Tests/RemoteClientTests` (Swift, native: decks, play and ledger rules, command policy, and `RemoteLink` driven by a fake environment with a manual clock), `Tests/worker` (Durable Objects on a fake host), `Tests/browser` (Playwright end-to-end, plus `live-smoke.mjs` for staging). Put new remote-control logic where `swift test` reaches it (`SessionLogic`, `RemoteClient`) and cover it there; keep the browser tests for end-to-end flows.
-- `docs/`: [architecture](docs/architecture.md) and [decision records](docs/decisions/). `REMOTE-VERIFICATION.md` records what was verified and what is still open; `TODO.md` is the original remote-control plan.
+- `docs/`: [architecture](docs/architecture.md), [decision records](docs/decisions/), and `docs/history/` (the original remote-control plan and the first verification record, kept as history).
 
 ## Implementation Constraints
 
@@ -70,6 +70,7 @@ pnpm exec playwright test                                 # browser tests agains
 pnpm exec vite preview                                    # serve the build locally
 ```
 
+- Run `pnpm run lint` (`swift format lint --strict` and ESLint; CI runs it too) and `pnpm run format` to fix Swift formatting (config in `.swift-format`).
 - Run `pnpm exec cf build` before committing UI or Swift changes; Embedded Swift can reject code that the regular SDK accepts. After a rebuild, restart a running `vite preview` (file names change).
 - Verify UI changes in a browser at the sizes listed above, including the play flow with keyboard (→/Space/←) and taps, and the remote flow when it is affected.
 - After changing dependencies, run `python3 Scripts/generate-licenses.py` and commit `public/licenses.html`.

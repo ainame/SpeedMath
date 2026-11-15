@@ -46,7 +46,7 @@ pnpm run dev      # 開発サーバー（Swift の変更でホットリロード
 pnpm exec cf build # Cloudflare 向けビルド（Embedded Swift）
 ```
 
-Cloudflare CLI は beta です。`pnpm exec cf auth login` でログイン後、`pnpm exec cf deploy` で Worker をビルド・公開できます。`cf deploy --dry-run` はアップロードせずに検証します。`wrangler.jsonc` は移行確認のため残していますが、`cf` は `cloudflare.config.ts` を使用します。
+Cloudflare CLI は beta です。`pnpm exec cf auth login` でログイン後、`pnpm exec cf deploy` で Worker をビルド・公開できます。`cf deploy --dry-run` はアップロードせずに検証します。設定は `cloudflare.config.ts` です。
 
 `main` に push すると GitHub Actions がビルドとテストを行い、Cloudflare Workers（`speedmath`）に公開します。secrets は `CLOUDFLARE_API_TOKEN`（`speedmath` の Workers Editor）と `CLOUDFLARE_ACCOUNT_ID` です。旧 GitHub Pages 版（https://ainame.github.io/SpeedMath/）は最後のビルドのまま残っていますが、更新されません。
 
