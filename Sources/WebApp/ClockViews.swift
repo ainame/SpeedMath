@@ -7,10 +7,15 @@ import ElementaryUI
 struct LiveTimer {
   let startedAt: Double
   @State var now: Double = 0
+  @State var ticker = BrowserListener()
 
   var body: some View {
     ClockDisplay(milliseconds: now - startedAt)
-      .attach(BrowserListener.interval(milliseconds: 100) { now = Browser.now() })
+      .onAppear {
+        now = Browser.now()
+        ticker.repeatEvery(milliseconds: 100) { now = Browser.now() }
+      }
+      .onDisappear { ticker.detach() }
   }
 }
 

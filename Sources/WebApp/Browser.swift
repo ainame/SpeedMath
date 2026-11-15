@@ -42,60 +42,45 @@ enum CardKey {
   case quit
 }
 
-/// Owns one browser listener (key presses or an interval) for the lifetime of a mounted view.
+/// Owns one browser listener (key presses or an interval) while a view is mounted.
+///
+/// Keep it in the view's `@State` and start it from `onAppear`: ElementaryUI replaces a
+/// re-rendered view's `onDisappear` closure, so a listener created inside `body` is released on
+/// the first update, which stops its timer and leaves its key listener behind.
 final class BrowserListener {
-  private let start: () -> (() -> Void)
   private var stop: (() -> Void)?
 
-  init(start: @escaping () -> (() -> Void)) {
-    self.start = start
+  init() {}
+
+  /// Listens for →, Space, ← and Esc on the document. Repeats from a held key and shortcuts with
+  /// modifier keys are ignored; handled keys call `preventDefault()` so Space does not scroll.
+  func listenForCardKeys(_ handler: @escaping (CardKey) -> Void) {
+    detach()
+    let subscription = BrowserPage.observeKeyDown { press in
+      guard !press.isRepeat, !press.hasModifier else { return }
+      let key: CardKey
+      switch press.key {
+      case "ArrowRight", " ": key = .next
+      case "ArrowLeft": key = .previous
+      case "Escape": key = .quit
+      default: return
+      }
+      press.preventDefault()
+      handler(key)
+    }
+    stop = { subscription.cancel() }
   }
 
-  func attach() {
-    guard stop == nil else { return }
-    stop = start()
+  /// Calls `handler` every `milliseconds`.
+  func repeatEvery(milliseconds: Int, _ handler: @escaping () -> Void) {
+    detach()
+    let timer = RepeatingTimer()
+    timer.start(every: Double(milliseconds), handler)
+    stop = { timer.stop() }
   }
 
   func detach() {
     stop?()
     stop = nil
-  }
-
-  /// Listens for →, Space, ← and Esc on the document. Repeats from a held key and shortcuts with
-  /// modifier keys are ignored; handled keys call `preventDefault()` so Space does not scroll.
-  static func cardKeys(_ handler: @escaping (CardKey) -> Void) -> BrowserListener {
-    BrowserListener {
-      let subscription = BrowserPage.observeKeyDown { press in
-        guard !press.isRepeat, !press.hasModifier else { return }
-        let key: CardKey
-        switch press.key {
-        case "ArrowRight", " ": key = .next
-        case "ArrowLeft": key = .previous
-        case "Escape": key = .quit
-        default: return
-        }
-        press.preventDefault()
-        handler(key)
-      }
-      return { subscription.cancel() }
-    }
-  }
-
-  /// Calls `handler` every `milliseconds`.
-  static func interval(milliseconds: Int, _ handler: @escaping () -> Void) -> BrowserListener {
-    BrowserListener {
-      let timer = RepeatingTimer()
-      timer.start(every: Double(milliseconds), handler)
-      return { timer.stop() }
-    }
-  }
-}
-
-extension View {
-  /// Attaches `listener` while this view is mounted.
-  func attach(_ listener: BrowserListener) -> some View<Tag> {
-    self
-      .onAppear { listener.attach() }
-      .onDisappear { listener.detach() }
   }
 }

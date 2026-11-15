@@ -39,6 +39,7 @@ struct PlaySession {
   @State var stamp: Stamp = .yokuDekimashita
   @State var isNewStamp: Bool = false
   @State var stampTilt: Int = -8
+  @State var keys = BrowserListener()
   @Environment(StampBook.self) var stampBook: StampBook
   @Environment(TodayRecords.self) var records: TodayRecords
   @Environment(RemoteHub.self) var hub: RemoteHub
@@ -116,12 +117,15 @@ struct PlaySession {
         backLink
       }
     }
-    .attach(BrowserListener.cardKeys { key in handle(key) })
     .onAppear {
+      keys.listenForCardKeys { key in handle(key) }
       deckID = Browser.identifier()
       hub.attachPlay(PlayHook(state: { hookState }, perform: { perform($0) }))
     }
-    .onDisappear { hub.detachPlay() }
+    .onDisappear {
+      keys.detach()
+      hub.detachPlay()
+    }
   }
 
   @ContentBuilder private var backLink: some View {
