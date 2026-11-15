@@ -40,7 +40,13 @@ public enum JS {
   static func then(_ value: JSValue, _ success: @escaping (JSValue) -> Void, _ failure: @escaping () -> Void) {
     guard let promise = JSPromise(from: value) else { return failure() }
     promise.then(
-      success: { success($0); return .undefined },
-      failure: { _ in failure(); return .undefined })
+      success: {
+        success($0)
+        return .undefined
+      },
+      failure: { _ in
+        failure()
+        return .undefined
+      })
   }
 }

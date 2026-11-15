@@ -1,7 +1,7 @@
 import ElementaryRouter
 import ElementaryUI
-import RemoteProtocol
 import ProtocolModels
+import RemoteProtocol
 import SessionLogic
 
 @View
@@ -221,16 +221,18 @@ struct PlaySession {
   }
 
   private var hookState: PlayHookState {
-    let screen: Screen = switch play.phase {
-    case .ready: .ready
-    case .playing: .playing
-    case .finished: .finished
-    }
-    let elapsed: Double = switch play.phase {
-    case .ready: 0
-    case .playing: max(0, Browser.now() - play.startedAt)
-    case .finished: play.elapsed
-    }
+    let screen: Screen =
+      switch play.phase {
+      case .ready: .ready
+      case .playing: .playing
+      case .finished: .finished
+      }
+    let elapsed: Double =
+      switch play.phase {
+      case .ready: 0
+      case .playing: max(0, Browser.now() - play.startedAt)
+      case .finished: play.elapsed
+      }
     var wire: [WireCard] = []
     if play.phase != .ready {
       for card in cards {

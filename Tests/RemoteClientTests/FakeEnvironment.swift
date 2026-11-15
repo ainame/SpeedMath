@@ -1,4 +1,5 @@
 import ProtocolModels
+
 @testable import RemoteClient
 
 /// A deterministic environment: a manual clock, timers that fire on `advance`, sockets and HTTP
@@ -9,7 +10,8 @@ final class FakeEnvironment: RemoteEnvironment {
   var isHidden = false
   var stored: String?
   var opened: [FakeSocket] = []
-  var requests: [(request: ControlRequest, completion: (Result<ControlResponse, ControlFailure>) -> Void, handle: FakeRequest)] = []
+  var requests:
+    [(request: ControlRequest, completion: (Result<ControlResponse, ControlFailure>) -> Void, handle: FakeRequest)] = []
   private var timers: [FakeTimer] = []
   private var handlers: [(RemoteEvent, () -> Void, FakeSubscription)] = []
   private var nextID = 0
@@ -165,7 +167,8 @@ let epoch = String(repeating: "e", count: 32)
 var homeSettings: WireSettings { WireSettings(deck: 0, includeZero: false, count: 45, showTimer: true) }
 
 func snapshot(version: Int, screen: Screen = .playing, index: Int = 0, epoch: String = epoch) -> Snapshot {
-  let cards = screen == .playing || screen == .finished
+  let cards =
+    screen == .playing || screen == .finished
     ? [WireCard(lhs: 1, sign: 1, rhs: 2)!, WireCard(lhs: 3, sign: -1, rhs: 1)!] : []
   return Snapshot(
     epoch: epoch, deckVersion: epoch, version: version, screen: screen,

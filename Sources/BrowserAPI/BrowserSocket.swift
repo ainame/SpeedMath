@@ -8,8 +8,11 @@ public final class BrowserSocket {
   public var onClose: ((_ code: Int, _ reason: String) -> Void)?
 
   private let socket: WebSocket
-  private var handlers: (open: JSTypedClosure<() -> Void>, message: JSTypedClosure<(MessageEvent) -> Void>,
-    close: JSTypedClosure<(CloseEvent) -> Void>)?
+  private var handlers:
+    (
+      open: JSTypedClosure<() -> Void>, message: JSTypedClosure<(MessageEvent) -> Void>,
+      close: JSTypedClosure<(CloseEvent) -> Void>
+    )?
 
   /// Opens `wss://<this origin><path>` (`ws://` on plain HTTP).
   public init?(path: String) {
@@ -54,12 +57,17 @@ public final class BrowserSocket {
     BrowserSocket.releaseLater(handlers)
   }
 
-  private static var retired: [(JSTypedClosure<() -> Void>, JSTypedClosure<(MessageEvent) -> Void>,
-    JSTypedClosure<(CloseEvent) -> Void>)] = []
+  private static var retired:
+    [(
+      JSTypedClosure<() -> Void>, JSTypedClosure<(MessageEvent) -> Void>,
+      JSTypedClosure<(CloseEvent) -> Void>
+    )] = []
   private static let releaser = Timeout()
 
   private static func releaseLater(
-    _ handlers: (JSTypedClosure<() -> Void>, JSTypedClosure<(MessageEvent) -> Void>, JSTypedClosure<(CloseEvent) -> Void>)
+    _ handlers: (
+      JSTypedClosure<() -> Void>, JSTypedClosure<(MessageEvent) -> Void>, JSTypedClosure<(CloseEvent) -> Void>
+    )
   ) {
     retired.append(handlers)
     releaser.start(0) {

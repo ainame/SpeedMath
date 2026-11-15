@@ -1,6 +1,6 @@
-import RemoteProtocol
 import BrowserAPI
 import ElementaryUI
+import RemoteProtocol
 
 @main
 struct App {

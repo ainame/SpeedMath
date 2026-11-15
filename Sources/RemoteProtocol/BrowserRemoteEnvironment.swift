@@ -49,7 +49,9 @@ public final class BrowserRemoteEnvironment: RemoteEnvironment {
     return BrowserHTTP.post(path, body: RemoteWire.encode(request)) { result in
       switch result {
       case .success(let text):
-        if let response = RemoteWire.decode(text, for: request) { completion(.success(response)) } else {
+        if let response = RemoteWire.decode(text, for: request) {
+          completion(.success(response))
+        } else {
           completion(.failure(.unavailable))
         }
       case .failure(.slow): completion(.failure(.slow))
@@ -91,7 +93,9 @@ public final class WireSocket: RemoteSocket {
   public var onMessage: ((ServerMessage) -> Void)? {
     didSet {
       let handler = onMessage
-      socket.onMessage = handler.map { handler in { text in if let message = RemoteWire.decode(text) { handler(message) } } }
+      socket.onMessage = handler.map { handler in
+        { text in if let message = RemoteWire.decode(text) { handler(message) } }
+      }
     }
   }
 

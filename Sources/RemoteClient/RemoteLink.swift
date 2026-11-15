@@ -230,7 +230,8 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
     socket.onOpen = { [self] in
       let first: ClientMessage
       if let generation = session.generation {
-        first = session.code.map { .joinCode(generation: generation, code: $0) }
+        first =
+          session.code.map { .joinCode(generation: generation, code: $0) }
           ?? .joinQR(generation: generation, key: session.key ?? "")
       } else {
         first = .auth(role: role.rawValue, key: session.key ?? "")
@@ -245,9 +246,10 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
 
   private func closed(code: Int, reason: String) {
     resetConnection()
-    let definitive = code == 4001 &&
-      (reason == "unavailable" || reason == "invite-ended" || reason == "revoked" || reason == "ended" ||
-        reason == "replaced")
+    let definitive =
+      code == 4001
+      && (reason == "unavailable" || reason == "invite-ended" || reason == "revoked" || reason == "ended"
+        || reason == "replaced")
     let wasJoining = session?.isJoining == true
     if wasJoining || definitive {
       session = nil

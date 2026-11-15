@@ -5,7 +5,9 @@
     "dev": "vite --host 0.0.0.0 --open",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:worker": "node --import ./Tests/worker/register.mjs --test Tests/worker/*.test.mjs"
+    "test:worker": "node --import ./Tests/worker/register.mjs --test Tests/worker/*.test.mjs",
+    "lint": "swift format lint --strict --recursive Sources Tests Package.swift && eslint .",
+    "format": "swift format format --in-place --recursive --parallel Sources Tests Package.swift"
   },
   "type": "module",
   "dependencies": {
@@ -15,8 +17,11 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.v.17",
     "@elementary-swift/vite-plugin-swift-wasm": "~0.2.0",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.61.1",
     "cf": "1.0.0-beta.32",
+    "eslint": "10.15.0",
+    "globals": "17.14.0",
     "jsqr": "1.4.0",
     "pngjs": "7.0.0",
     "vite": "^8.0.0"

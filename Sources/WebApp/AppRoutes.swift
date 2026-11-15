@@ -1,6 +1,6 @@
-import SessionLogic
 import ElementaryRouter
 import ElementaryUI
+import SessionLogic
 
 /// Hash routing keeps the app deployable as plain static files (e.g. GitHub Pages)
 /// and needs no click-interception script in `index.html`.

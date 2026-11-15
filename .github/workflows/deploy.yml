@@ -61,6 +61,8 @@ jobs:
             swiftpm-build-swift-6.4.2-
       - name: Install dependencies
         run: swift package resolve && pnpm install --frozen-lockfile
+      - name: Lint (swift format, ESLint)
+        run: pnpm run lint
       - name: Test Swift
         run: swift test
       - name: Check generated licenses

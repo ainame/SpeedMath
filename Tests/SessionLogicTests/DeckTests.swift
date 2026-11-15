@@ -24,9 +24,12 @@ func deckRangeAndDrawOrder(deck: Deck) {
     case .subtractionNoBorrow:
       #expect(card.op == .minus && (1...10).contains(card.lhs) && (1...9).contains(card.rhs) && card.answer >= 0)
     case .additionCarry:
-      #expect(card.op == .plus && (2...9).contains(card.lhs) && (2...9).contains(card.rhs) && (11...18).contains(card.answer))
+      #expect(
+        card.op == .plus && (2...9).contains(card.lhs) && (2...9).contains(card.rhs) && (11...18).contains(card.answer))
     case .subtractionBorrow:
-      #expect(card.op == .minus && (11...18).contains(card.lhs) && (2...9).contains(card.rhs) && (2...9).contains(card.answer))
+      #expect(
+        card.op == .minus && (11...18).contains(card.lhs) && (2...9).contains(card.rhs) && (2...9).contains(card.answer)
+      )
     }
   }
   var full = Seeded()

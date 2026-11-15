@@ -15,7 +15,8 @@ import Testing
   #expect(WireRules.validCard(lhs: 18, sign: -1, rhs: 9))
   #expect(!WireRules.validCard(lhs: 0, sign: 1, rhs: 1))
   #expect(!WireRules.validCard(lhs: 9, sign: 0, rhs: 1))
-  func snapshot(_ screen: Int, index: Int = 0, cards: Int = 0, elapsed: Int = 0, deck: Int = 0, count: Int = 0) -> Bool {
+  func snapshot(_ screen: Int, index: Int = 0, cards: Int = 0, elapsed: Int = 0, deck: Int = 0, count: Int = 0) -> Bool
+  {
     WireRules.validSnapshot(
       version: 3, screen: screen, index: index, cards: cards, elapsed: elapsed, deck: deck, zero: 0, count: count,
       timer: 1)
@@ -47,7 +48,15 @@ import Testing
   let card = WireCard(lhs: 1, sign: 1, rhs: 1)!
   let id = String(repeating: "1", count: 32)
   let settings = WireSettings(deck: 0, includeZero: false, count: 0, showTimer: true)
-  #expect(Snapshot(epoch: id, deckVersion: id, version: 0, screen: .home, index: 0, elapsed: 0, cards: [], settings: settings) != nil)
-  #expect(Snapshot(epoch: id, deckVersion: id, version: 0, screen: .ready, index: 0, elapsed: 0, cards: [card], settings: settings) == nil)
-  #expect(Snapshot(epoch: id, deckVersion: id, version: 2, screen: .finished, index: 0, elapsed: 5, cards: [card], settings: settings) != nil)
+  #expect(
+    Snapshot(epoch: id, deckVersion: id, version: 0, screen: .home, index: 0, elapsed: 0, cards: [], settings: settings)
+      != nil)
+  #expect(
+    Snapshot(
+      epoch: id, deckVersion: id, version: 0, screen: .ready, index: 0, elapsed: 0, cards: [card], settings: settings)
+      == nil)
+  #expect(
+    Snapshot(
+      epoch: id, deckVersion: id, version: 2, screen: .finished, index: 0, elapsed: 5, cards: [card], settings: settings
+    ) != nil)
 }

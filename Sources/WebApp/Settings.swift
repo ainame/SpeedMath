@@ -1,5 +1,5 @@
-import SessionLogic
 import Reactivity
+import SessionLogic
 
 /// Choices made on the home screen. Lives above the router so they survive navigation.
 @Reactive

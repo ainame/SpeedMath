@@ -26,7 +26,8 @@ import Testing
   #expect(ledger.version == 1)
   // A resend gets the first answer; the same id with different content is a conflict.
   #expect(ledger.admit(next, now: 10) == .answer(.applied))
-  #expect(ledger.admit(Command(id: "a", epoch: "doc", baseVersion: 0, action: .previous), now: 10) == .answer(.conflict))
+  #expect(
+    ledger.admit(Command(id: "a", epoch: "doc", baseVersion: 0, action: .previous), now: 10) == .answer(.conflict))
   // A local change moves the version on, so a command based on the old state must resync.
   ledger.bump()
   #expect(ledger.admit(Command(id: "b", epoch: "doc", baseVersion: 1, action: .next), now: 20) == .answer(.resync))

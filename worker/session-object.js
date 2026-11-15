@@ -1,7 +1,7 @@
 // One pairing session: authentication, invites and approval, and relaying play messages.
 import { DurableObject } from "cloudflare:workers";
 import { VERSION, CONTROL_LIMIT, alphabet, frame, logic, normalizeCode, relayKind, sessionPattern, tokenPattern } from "./protocol.js";
-import { AUTH_WAIT, INVITE, RECONNECT, SESSION, credential, digest, headers, invalid, matches, object, random, shard } from "./shared.js";
+import { AUTH_WAIT, INVITE, RECONNECT, SESSION, credential, digest, headers, invalid, matches, random, shard } from "./shared.js";
 
 export class SessionObject extends DurableObject {
   constructor(ctx, env) {
@@ -126,7 +126,7 @@ export class SessionObject extends DurableObject {
     await this.schedule(state);
   }
 
-  async invite(ws, a) {
+  async invite(ws) {
     let state = this.load();
     if (!this.live(state) || !this.active(state, ws, 1)) return;
     if (state.remote && state.remote.until > Date.now()) return;
@@ -224,7 +224,7 @@ export class SessionObject extends DurableObject {
     if (!a.role || !this.active(state, ws, a.role)) return this.close(ws);
     if (message.type === "ping") return this.send(ws, "pong");
     if (a.role === 1) {
-      if (message.type === "invite") return this.invite(ws, a);
+      if (message.type === "invite") return this.invite(ws);
       if (message.type === "approve") return this.approve(ws, message.request);
       if (message.type === "reject" && state.pending?.display.request !== message.request) return;
       if (message.type === "reject" || message.type === "revoke" || message.type === "end") {

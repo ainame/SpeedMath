@@ -31,16 +31,20 @@ public enum BrowserHTTP {
       completion(.failure(.unavailable))
       return request
     }
-    JS.then(promise.jsValue, { value in
-      guard let object = value.object else { return completion(.failure(.unavailable)) }
-      let response = Response(unsafelyWrapping: object)
-      guard (try? response.ok) == true, let text = try? response.text() else {
-        return completion(.failure((try? response.status) == 429 ? .slow : .unavailable))
-      }
-      JS.then(text.jsValue, { value in
-        if let text = value.string { completion(.success(text)) } else { completion(.failure(.unavailable)) }
+    JS.then(
+      promise.jsValue,
+      { value in
+        guard let object = value.object else { return completion(.failure(.unavailable)) }
+        let response = Response(unsafelyWrapping: object)
+        guard (try? response.ok) == true, let text = try? response.text() else {
+          return completion(.failure((try? response.status) == 429 ? .slow : .unavailable))
+        }
+        JS.then(
+          text.jsValue,
+          { value in
+            if let text = value.string { completion(.success(text)) } else { completion(.failure(.unavailable)) }
+          }, { completion(.failure(.unavailable)) })
       }, { completion(.failure(.unavailable)) })
-    }, { completion(.failure(.unavailable)) })
     return request
   }
 }

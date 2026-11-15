@@ -1,7 +1,7 @@
 import ElementaryRouter
 import ElementaryUI
-import RemoteProtocol
 import ProtocolModels
+import RemoteProtocol
 import SessionLogic
 
 @View

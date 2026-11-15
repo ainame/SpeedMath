@@ -1,7 +1,7 @@
 import ElementaryRouter
 import ElementaryUI
-import RemoteProtocol
 import ProtocolModels
+import RemoteProtocol
 import SessionLogic
 
 /// Today's stamp card: six slots filled in the order the stamps were collected.

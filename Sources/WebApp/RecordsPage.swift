@@ -1,7 +1,7 @@
 import ElementaryRouter
 import ElementaryUI
-import RemoteProtocol
 import ProtocolModels
+import RemoteProtocol
 import SessionLogic
 
 /// Today's finished runs, newest first. The page is fixed like every other screen; only the list

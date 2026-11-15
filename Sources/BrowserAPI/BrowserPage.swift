@@ -32,11 +32,15 @@ public enum BrowserPage {
   public static func observe(_ event: Event, _ handler: @escaping () -> Void) -> Subscription {
     let listener = JSTypedClosure<() -> Void>(handler)
     let onDocument = event == .visibilityChange
-    if onDocument { try? document.addEventListener(event.rawValue, listener) } else {
+    if onDocument {
+      try? document.addEventListener(event.rawValue, listener)
+    } else {
       try? addEventListener(event.rawValue, listener)
     }
     return Subscription {
-      if onDocument { try? document.removeEventListener(event.rawValue, listener) } else {
+      if onDocument {
+        try? document.removeEventListener(event.rawValue, listener)
+      } else {
         try? removeEventListener(event.rawValue, listener)
       }
       listener.release()
