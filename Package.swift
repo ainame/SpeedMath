@@ -16,7 +16,8 @@ let package = Package(
     .target(
       name: "RemoteProtocol",
       dependencies: ["ProtocolModels", .product(name: "JavaScriptKit", package: "JavaScriptKit")],
-      swiftSettings: [.swiftLanguageMode(.v5)]
+      swiftSettings: [.swiftLanguageMode(.v5), .enableExperimentalFeature("Extern")],
+      plugins: [.plugin(name: "BridgeJS", package: "JavaScriptKit")]
     ),
     .executableTarget(
       name: "WebApp",
