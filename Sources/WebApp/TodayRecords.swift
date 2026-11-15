@@ -1,6 +1,5 @@
-import SessionLogic
-import JavaScriptKit
 import Reactivity
+import SessionLogic
 
 /// One finished run.
 struct PlayRecord: Equatable {
@@ -15,8 +14,6 @@ struct PlayRecord: Equatable {
 /// Today's finished runs, newest last. Stored in localStorage and emptied at local midnight.
 @Reactive
 final class TodayRecords {
-  static let storageKey = "speedmath.records.v1"
-
   private(set) var records: [PlayRecord] = []
   private var date: String = ""
 
@@ -49,44 +46,8 @@ final class TodayRecords {
 
   private func load() {
     date = DailyStorage.todayKey()
-    guard let saved = DailyStorage.load(Self.storageKey, today: date),
-      let list = saved["records"].object
-    else { return }
-    let length = Int(list["length"].number ?? 0)
-    var loaded: [PlayRecord] = []
-    for index in 0..<length {
-      guard let item = list[index].object,
-        let deck = item["deck"].string.flatMap(Deck.init(rawValue:)),
-        let count = item["count"].number,
-        let milliseconds = item["ms"].number
-      else { continue }
-      loaded.append(
-        PlayRecord(
-          deck: deck,
-          count: Int(count),
-          includeZero: item["zero"].boolean ?? false,
-          milliseconds: Int(milliseconds),
-          finishedAt: item["at"].string ?? ""
-        )
-      )
-    }
-    records = loaded
+    records = DailyStorage.loadRecords(today: date)
   }
 
-  private func save() {
-    let records = self.records
-    DailyStorage.save(Self.storageKey, date: date) { value in
-      guard let list = DailyStorage.makeArray() else { return }
-      for (index, record) in records.enumerated() {
-        guard let item = DailyStorage.makeObject() else { continue }
-        item["deck"] = record.deck.rawValue.jsValue
-        item["count"] = record.count.jsValue
-        item["zero"] = record.includeZero.jsValue
-        item["ms"] = record.milliseconds.jsValue
-        item["at"] = record.finishedAt.jsValue
-        list[index] = item.jsValue
-      }
-      value["records"] = list.jsValue
-    }
-  }
+  private func save() { DailyStorage.saveRecords(records, date: date) }
 }

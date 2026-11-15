@@ -1,26 +1,18 @@
+import BrowserAPI
 import ElementaryUI
-import JavaScriptKit
 
-/// Small JavaScriptKit helpers for things ElementaryUI does not expose publicly.
+/// App-level shortcuts to the browser (through `BrowserAPI`).
 enum Browser {
   /// High-resolution timestamp in milliseconds (`performance.now()`).
-  static func now() -> Double {
-    guard let performance = JSObject.global.performance.object else { return 0 }
-    return performance["now"].function?.callAsFunction(this: performance).number ?? 0
-  }
-
-  static func random() -> Double {
-    guard let math = JSObject.global.Math.object else { return 0 }
-    return math["random"].function?.callAsFunction(this: math).number ?? 0
-  }
+  static func now() -> Double { BrowserPage.now }
 }
 
-/// Random source backed by `Math.random()`, avoiding a dependency on WASI randomness.
+/// Random source backed by `crypto.getRandomValues`, avoiding a dependency on WASI randomness.
 struct BrowserRandom: RandomNumberGenerator {
   mutating func next() -> UInt64 {
-    let high = UInt64(Browser.random() * 4_294_967_296)
-    let low = UInt64(Browser.random() * 4_294_967_296)
-    return (high << 32) | low
+    var value: UInt64 = 0
+    for byte in BrowserPage.randomBytes(8) { value = value << 8 | UInt64(byte) }
+    return value
   }
 }
 
@@ -32,7 +24,7 @@ enum CardKey {
   case quit
 }
 
-/// Owns one JS listener (keydown or interval) for the lifetime of a mounted view.
+/// Owns one browser listener (key presses or an interval) for the lifetime of a mounted view.
 final class BrowserListener {
   private let start: () -> (() -> Void)
   private var stop: (() -> Void)?
@@ -51,60 +43,32 @@ final class BrowserListener {
     stop = nil
   }
 
-  /// Listens for →, Space, ← and Esc on the document. Repeats from a held key are ignored, and handled
-  /// keys call `preventDefault()` so Space does not scroll the page.
+  /// Listens for →, Space, ← and Esc on the document. Repeats from a held key and shortcuts with
+  /// modifier keys are ignored; handled keys call `preventDefault()` so Space does not scroll.
   static func cardKeys(_ handler: @escaping (CardKey) -> Void) -> BrowserListener {
     BrowserListener {
-      let closure = JSClosure { arguments in
-        guard let event = arguments.first?.object else { return .undefined }
-        if event.repeat.boolean == true { return .undefined }
-        if event.ctrlKey.boolean == true || event.metaKey.boolean == true || event.altKey.boolean == true {
-          return .undefined
-        }
+      let subscription = BrowserPage.observeKeyDown { press in
+        guard !press.isRepeat, !press.hasModifier else { return }
         let key: CardKey
-        switch event.key.string {
+        switch press.key {
         case "ArrowRight", " ": key = .next
         case "ArrowLeft": key = .previous
         case "Escape": key = .quit
-        default: return .undefined
+        default: return
         }
-        _ = event["preventDefault"].function?.callAsFunction(this: event)
+        press.preventDefault()
         handler(key)
-        return .undefined
       }
-      let document = JSObject.global.document
-      _ = document.object?["addEventListener"].function?.callAsFunction(
-        this: document.object!,
-        "keydown",
-        closure
-      )
-      return {
-        _ = document.object?["removeEventListener"].function?.callAsFunction(
-          this: document.object!,
-          "keydown",
-          closure
-        )
-      }
+      return { subscription.cancel() }
     }
   }
 
-  /// Calls `handler` every `milliseconds` via `setInterval`.
+  /// Calls `handler` every `milliseconds`.
   static func interval(milliseconds: Int, _ handler: @escaping () -> Void) -> BrowserListener {
     BrowserListener {
-      let closure = JSClosure { _ in
-        handler()
-        return .undefined
-      }
-      let id = JSObject.global["setInterval"].function?.callAsFunction(
-        this: JSObject.global,
-        closure,
-        milliseconds
-      )
-      return {
-        if let id {
-          _ = JSObject.global["clearInterval"].function?.callAsFunction(this: JSObject.global, id)
-        }
-      }
+      let timer = RepeatingTimer()
+      timer.start(every: Double(milliseconds), handler)
+      return { timer.stop() }
     }
   }
 }

@@ -21,13 +21,15 @@ enum Stamp: String, CaseIterable {
   }
 
   static func random(from stamps: [Stamp] = Stamp.allCases) -> Stamp {
-    stamps[min(Int(Browser.random() * Double(stamps.count)), stamps.count - 1)]
+    var rng = BrowserRandom()
+    return stamps.randomElement(using: &rng) ?? .yokuDekimashita
   }
 
   /// A slight tilt to the left or right, 5–13 degrees, like a hand-pressed stamp.
   static func randomTilt() -> Int {
-    let magnitude = 5 + Int(Browser.random() * 9)
-    return Browser.random() < 0.5 ? -magnitude : magnitude
+    var rng = BrowserRandom()
+    let magnitude = Int.random(in: 5...13, using: &rng)
+    return Bool.random(using: &rng) ? -magnitude : magnitude
   }
 
   /// Fixed per-slot tilts for the stamp card, so the layout does not jitter between renders.

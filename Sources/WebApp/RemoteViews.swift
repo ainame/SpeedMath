@@ -1,6 +1,5 @@
 import ElementaryRouter
 import ElementaryUI
-import JavaScriptKit
 import ProtocolModels
 import RemoteProtocol
 import SessionLogic

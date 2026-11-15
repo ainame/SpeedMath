@@ -1,8 +1,8 @@
 import JavaScriptKit
 import ProtocolModels
 
-/// Untyped JavaScriptKit access for the message codec (`RemoteWire`), which reads fields from
-/// parsed JSON objects. Everything else goes through the typed BridgeJS bindings.
+/// Untyped JavaScriptKit access for the JSON codecs (`RemoteWire`, `DailyStorage`), which read and
+/// build fields of parsed JSON objects. Everything else goes through the typed BridgeJS bindings.
 public enum JS {
   public static var global: JSObject { JSObject.global }
 
@@ -11,6 +11,8 @@ public enum JS {
   }
 
   public static func object() -> JSObject { new("Object")! }
+
+  public static func array() -> JSObject { new("Array")! }
 
   /// `JSON.parse`, or nil for malformed text (the exception is caught by BridgeJS).
   public static func parse(_ text: String) -> JSObject? {

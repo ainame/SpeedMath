@@ -1,3 +1,4 @@
+import BrowserAPI
 import JavaScriptKit
 import ProtocolModels
 

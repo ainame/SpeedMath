@@ -1,8 +1,10 @@
+import BrowserAPI
 import ElementaryUI
 
 @main
 struct App {
   static func main() {
+    BrowserPage.installAppGuards()
     // Before the router reads the URL: take a QR invite out of it and restore a reloaded Presenter.
     RemoteLink.startup()
     let app = Application(AppRoot())

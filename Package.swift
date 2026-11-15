@@ -13,11 +13,17 @@ let package = Package(
     .target(name: "ProtocolModels"),
     .target(name: "SessionLogic", dependencies: ["ProtocolModels"]),
     .testTarget(name: "SessionLogicTests", dependencies: ["SessionLogic", "ProtocolModels"]),
+    // Typed browser APIs (BridgeJS bindings) and the small Swift wrappers the app uses.
     .target(
-      name: "RemoteProtocol",
+      name: "BrowserAPI",
       dependencies: ["ProtocolModels", .product(name: "JavaScriptKit", package: "JavaScriptKit")],
       swiftSettings: [.swiftLanguageMode(.v5), .enableExperimentalFeature("Extern")],
       plugins: [.plugin(name: "BridgeJS", package: "JavaScriptKit")]
+    ),
+    .target(
+      name: "RemoteProtocol",
+      dependencies: ["ProtocolModels", "BrowserAPI", .product(name: "JavaScriptKit", package: "JavaScriptKit")],
+      swiftSettings: [.swiftLanguageMode(.v5)]
     ),
     .executableTarget(
       name: "WebApp",
@@ -25,6 +31,7 @@ let package = Package(
         "SessionLogic",
         "ProtocolModels",
         "RemoteProtocol",
+        "BrowserAPI",
         .product(name: "ElementaryUI", package: "elementary-ui"),
         .product(name: "ElementaryRouter", package: "elementary-router"),
       ],

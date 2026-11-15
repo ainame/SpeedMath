@@ -1,4 +1,3 @@
-import JavaScriptKit
 import Reactivity
 
 /// Today's stamp card: every finished run awards one stamp the card does not have yet, in random
@@ -6,8 +5,6 @@ import Reactivity
 /// changes (midnight).
 @Reactive
 final class StampBook {
-  static let storageKey = "speedmath.stamps.v1"
-
   /// Stamps collected today, in the order they were awarded.
   private(set) var stamps: [Stamp] = []
   private var date: String = ""
@@ -41,27 +38,8 @@ final class StampBook {
 
   private func load() {
     date = DailyStorage.todayKey()
-    guard let saved = DailyStorage.load(Self.storageKey, today: date),
-      let list = saved["stamps"].object
-    else { return }
-    let count = Int(list["length"].number ?? 0)
-    var loaded: [Stamp] = []
-    for index in 0..<count {
-      if let raw = list[index].string, let stamp = Stamp(rawValue: raw), !loaded.contains(stamp) {
-        loaded.append(stamp)
-      }
-    }
-    stamps = loaded
+    stamps = DailyStorage.loadStamps(today: date)
   }
 
-  private func save() {
-    let stamps = self.stamps
-    DailyStorage.save(Self.storageKey, date: date) { value in
-      guard let list = DailyStorage.makeArray() else { return }
-      for (index, stamp) in stamps.enumerated() {
-        list[index] = stamp.rawValue.jsValue
-      }
-      value["stamps"] = list.jsValue
-    }
-  }
+  private func save() { DailyStorage.saveStamps(stamps, date: date) }
 }

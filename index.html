@@ -426,22 +426,6 @@
 </head>
 
 <body>
-  <script>
-    // localStorage can throw (private mode, blocked storage), so the Swift side goes through this.
-    // Safety net for the same iOS rotation issue: snap back to the top whenever the viewport changes.
-    window.addEventListener("resize", () => window.scrollTo(0, 0));
-    // iOS may still zoom on pinch or double tap despite the viewport and touch-action settings.
-    document.addEventListener("gesturestart", (event) => event.preventDefault());
-    document.addEventListener("dblclick", (event) => event.preventDefault(), { passive: false });
-    window.speedMathStorage = {
-      load(key) {
-        try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
-      },
-      save(key, value) {
-        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-      },
-    };
-  </script>
   <script type="module" src="/web/main.js"></script>
 </body>
 
