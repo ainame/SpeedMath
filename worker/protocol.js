@@ -4,7 +4,7 @@ import logicModule from "./generated/logic.wasm";
 // built into a tiny import-free Wasm module by Scripts/build-worker-wasm.sh.
 export const logic = new WebAssembly.Instance(logicModule).exports;
 
-export const VERSION = 2;
+export const VERSION = logic.protocol_version();
 export const FRAME_LIMIT = 8192;
 export const CONTROL_LIMIT = 512;
 export const tokenPattern = /^[0-9a-f]{64}$/;

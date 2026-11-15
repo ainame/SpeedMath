@@ -19,7 +19,7 @@ const bytes = await readFile(join(dir, "bundle", logic));
 const module = new WebAssembly.Module(bytes);
 assert.deepEqual(WebAssembly.Module.imports(module), []);
 const rules = new WebAssembly.Instance(module).exports;
-assert.equal(rules.protocol_version(), 1);
+assert.equal(rules.protocol_version(), 2);
 assert.equal(rules.valid_card(9, 1, 9), 1);
 assert.equal(rules.valid_card(9, 1, 10), 0);
 assert.equal(rules.valid_snapshot(0, 0, 0, 0, 0, 0, 0, 45, 1), 1);

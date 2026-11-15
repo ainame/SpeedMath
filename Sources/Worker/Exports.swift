@@ -1,6 +1,6 @@
 // Freestanding, synchronous ABI. No JS or WASI imports, heap state, or I/O.
 @_cdecl("protocol_version")
-public func protocolVersion() -> Int32 { 1 }
+public func protocolVersion() -> Int32 { Int32(WireRules.protocolVersion) }
 
 @_cdecl("can_relay")
 public func canRelay(_ role: Int32, _ kind: Int32) -> Int32 {

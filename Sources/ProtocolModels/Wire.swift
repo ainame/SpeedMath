@@ -87,6 +87,9 @@ public enum CommandResult: Int32 {
 /// import-free `logic.wasm` built from this file and `Sources/Worker/Exports.swift`). Keep this
 /// free of strings, arrays and allocation so it links without a heap.
 public enum WireRules {
+  /// The wire protocol version. The browser (`Wire.version`), the JS Worker (`VERSION` in
+  /// worker/protocol.js) and `/api/health` all read this one value.
+  public static let protocolVersion = 2
   public static let maxInteger = 2_147_483_647
   public static let maxCards = 54
   public static let maxElapsed = 86_400_000

@@ -2,7 +2,7 @@
 // Byte-level string handling keeps this Embedded Swift friendly: no Foundation, no Character parsing.
 
 public enum Wire {
-  public static let version = 2
+  public static let version = WireRules.protocolVersion
   public static let frameLimit = 8192
   public static let controlLimit = 512
   public static let maxCards = WireRules.maxCards

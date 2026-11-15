@@ -41,7 +41,7 @@ const wasClosed = (page, i) => expect.poll(() => page.evaluate(i => window.socke
 
 test("Worker isolates two rooms, rejects invalid roles, and consumes both invitations", async ({ page }) => {
   await page.goto("/");
-  expect(await (await fetch(P + "/api/health")).json()).toEqual({ version: 1 });
+  expect(await (await fetch(P + "/api/health")).json()).toEqual({ version: 2 });
   const invalid = await fetch(P + "/api/unknown");
   expect(invalid.status).toBe(404);
   expect(await invalid.json()).toEqual({ error: "unavailable" });
