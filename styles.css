@@ -405,7 +405,12 @@ p, h1, h2 { margin: 0; }
      スタンプ right) comes first and the title gets its own row below it. */
   .app:has(.home) .app-header { grid-template-columns: 1fr; row-gap: 0.6em; }
   .app:has(.home) .header-remote { justify-self: start; }
-  .home-options { grid-template-columns: 1fr; row-gap: 1.5vmin; }
+  /* Options flow like words: each group takes its natural width and wraps to the next line only
+     when it does not fit, so short groups share a line. */
+  .home-options { display: flex; flex-wrap: wrap; column-gap: 1.6em; row-gap: 0.7em; padding: 0.8em 0.2em 0.2em; }
+  .home-options > div { flex: none; }
+  .home-options .step { white-space: nowrap; margin-bottom: 0.3em; }
+  .home-options .chips { flex-wrap: nowrap; gap: 0.5em; }
   .deck-grid { grid-template-columns: repeat(2, 1fr); }
   .finished { flex-direction: column; gap: 2vmin; }
   .stamp { height: min(45cqh, 70cqw); }
