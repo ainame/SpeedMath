@@ -2,7 +2,7 @@
 
 小学生向けのスピード計算（計算カード）アプリです。算数セットの計算カードと同じ 4 種類のデッキをシャッフルして 1 枚ずつ表示し、最後までの時間を計ります。
 
-**▶ https://ainame.github.io/SpeedMath/**
+**▶ https://speedmath.ainame-apps.workers.dev**
 
 Swift で書かれていて、WebAssembly としてブラウザで動きます。
 
@@ -48,7 +48,9 @@ pnpm exec cf build # Cloudflare 向けビルド（Embedded Swift）
 
 Cloudflare CLI は beta です。`pnpm exec cf auth login` でログイン後、`pnpm exec cf deploy` で Worker をビルド・公開できます。`cf deploy --dry-run` はアップロードせずに検証します。`wrangler.jsonc` は移行確認のため残していますが、`cf` は `cloudflare.config.ts` を使用します。
 
-`main` に push すると GitHub Actions が Cloudflare Workers Static Assets にデプロイします。GitHub Actions の secrets に `CLOUDFLARE_API_TOKEN`（Workers のデプロイ権限）と `CLOUDFLARE_ACCOUNT_ID` を設定してください。Cloudflare への移行完了までは、上記の GitHub Pages 版を利用できます。
+`main` に push すると GitHub Actions がビルドとテストを行い、Cloudflare Workers（`speedmath`）に公開します。secrets は `CLOUDFLARE_API_TOKEN`（`speedmath` の Workers Editor）と `CLOUDFLARE_ACCOUNT_ID` です。旧 GitHub Pages 版（https://ainame.github.io/SpeedMath/）は最後のビルドのまま残っていますが、更新されません。
+
+全体の構成（アプリ、リモコンの通信、Worker と Durable Object、ビルドと公開）は [docs/architecture.md](docs/architecture.md) にまとめています。
 
 [elementary-swift/starter-vite](https://github.com/elementary-swift/starter-vite) テンプレートから作成しました。
 
