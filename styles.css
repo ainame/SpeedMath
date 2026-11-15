@@ -140,7 +140,7 @@ p, h1, h2 { margin: 0; }
 .clock-digit { display: inline-block; width: 0.66em; text-align: center; }
 .clock-unit { font-size: 0.7em; margin: 0 0.3em 0 0.1em; }
 .clock-unit:last-child { margin-right: 0; }
-.progress .clock { padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--line); font-size: 1.2rem; }
+.progress .clock { padding: 0.15em 0.9em; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--line); font-size: 1.2rem; }
 
 .card-area { flex: 1; min-height: 0; position: relative; container-type: size; }
 .card {
@@ -296,7 +296,7 @@ p, h1, h2 { margin: 0; }
 .remote-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 1.15rem; font-weight: bold; min-height: 2.2em; }
 .remote-bar .progress-side:first-child { justify-content: flex-start; }
 .remote-bar .clock {
-  padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface);
+  padding: 0.15em 0.9em; border-radius: 999px; background: var(--surface);
   border: 2.5px solid var(--line); font-size: 1.3rem;
 }
 .remote-count { font-size: 1.3rem; }
@@ -316,7 +316,7 @@ p, h1, h2 { margin: 0; }
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .remote-answer {
-  display: flex; align-items: center; gap: 0.35em; padding: 0.1em 0.6em 0.1em 0.5em;
+  display: flex; align-items: center; gap: min(4cqh, 3cqw); padding: 0.1em min(8cqh, 6cqw);
   border-radius: 999px; background: var(--accent-soft); color: var(--accent-pressed);
 }
 .remote-answer-label { font-size: min(9cqh, 7cqw); font-weight: bold; }
@@ -397,7 +397,7 @@ p, h1, h2 { margin: 0; }
 @media (orientation: portrait) {
   .pair-invite { flex-direction: column; }
   .pair-qr { width: min(56cqw, 36cqh, 240px); }
-  .progress .clock { padding-inline: 0.3em; font-size: 0.95rem; }
+  .progress .clock { padding-inline: 0.85em; font-size: 0.95rem; }
 }
 
 /* Portrait phones: 2×2 decks, stacked options, 3×2 stamp slots. */
