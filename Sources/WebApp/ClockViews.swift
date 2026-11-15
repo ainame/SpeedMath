@@ -20,9 +20,9 @@ struct LiveTimer {
   }
 }
 
-/// Shows elapsed time as 「x ふん y びょう」 in whole seconds. Every digit sits in a fixed-width
-/// cell, so the clock does not jitter as it ticks, regardless of whether the font has tabular
-/// figures.
+/// Shows elapsed time as 「x ふん y びょう」 in whole seconds. Minutes and seconds always take two
+/// fixed-width digit cells (a one-digit value leaves the first cell blank instead of showing a
+/// leading zero), so the clock keeps the same width from 0ふん 0びょう to 99ふん 59びょう.
 @View
 struct ClockDisplay {
   let milliseconds: Double
@@ -42,14 +42,14 @@ struct ClockGlyph {
   let isDigit: Bool
 
   static func glyphs(_ time: ClockTime) -> [ClockGlyph] {
-    func digit(_ value: Int) -> ClockGlyph { ClockGlyph(text: "\(value)", isDigit: true) }
-    var glyphs: [ClockGlyph] = []
-    if time.minutes >= 10 { glyphs.append(digit(time.minutes / 10)) }
-    glyphs.append(digit(time.minutes % 10))
-    glyphs.append(ClockGlyph(text: "ふん", isDigit: false))
-    if time.seconds >= 10 { glyphs.append(digit(time.seconds / 10)) }
-    glyphs.append(digit(time.seconds % 10))
-    glyphs.append(ClockGlyph(text: "びょう", isDigit: false))
-    return glyphs
+    /// Two digit cells; the tens cell stays empty (but keeps its width) below 10.
+    func twoCells(_ value: Int) -> [ClockGlyph] {
+      [
+        ClockGlyph(text: value >= 10 ? "\(value / 10)" : "", isDigit: true),
+        ClockGlyph(text: "\(value % 10)", isDigit: true),
+      ]
+    }
+    return twoCells(time.minutes) + [ClockGlyph(text: "ふん", isDigit: false)]
+      + twoCells(time.seconds) + [ClockGlyph(text: "びょう", isDigit: false)]
   }
 }

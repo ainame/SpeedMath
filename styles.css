@@ -135,9 +135,12 @@ p, h1, h2 { margin: 0; }
 .progress-side { display: flex; }
 .progress-side a { position: relative; z-index: 2; }
 .progress-timer { justify-content: flex-end; }
-/* Each clock digit has a fixed cell width so 「x ふん y びょう」 never shifts as digits change. */
+/* Each clock digit has a fixed cell width and minutes and seconds always take two cells, so
+   「x ふん y びょう」 keeps one width as it ticks. An empty tens cell gets an invisible space so it
+   still has a text baseline to line up with the digits. */
 .clock { display: inline-flex; justify-content: center; align-items: baseline; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .clock-digit { display: inline-block; width: 0.66em; text-align: center; }
+.clock-digit:empty::before { content: "\00a0"; }
 .clock-unit { font-size: 0.7em; margin: 0 0.3em 0 0.1em; }
 .clock-unit:last-child { margin-right: 0; }
 .progress .clock { padding: 0.15em 0.9em; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--line); font-size: 1.2rem; }
