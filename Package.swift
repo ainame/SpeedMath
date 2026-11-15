@@ -12,6 +12,9 @@ let package = Package(
   targets: [
     .target(name: "ProtocolModels"),
     .target(name: "SessionLogic", dependencies: ["ProtocolModels"]),
+    // The remote control's client logic (RemoteLink), free of JavaScriptKit so it runs in `swift test`.
+    .target(name: "RemoteClient", dependencies: ["ProtocolModels"]),
+    .testTarget(name: "RemoteClientTests", dependencies: ["RemoteClient", "ProtocolModels"]),
     .testTarget(name: "SessionLogicTests", dependencies: ["SessionLogic", "ProtocolModels"]),
     // Typed browser APIs (BridgeJS bindings) and the small Swift wrappers the app uses.
     .target(
@@ -22,7 +25,9 @@ let package = Package(
     ),
     .target(
       name: "RemoteProtocol",
-      dependencies: ["ProtocolModels", "BrowserAPI", .product(name: "JavaScriptKit", package: "JavaScriptKit")],
+      dependencies: [
+        "ProtocolModels", "RemoteClient", "BrowserAPI", .product(name: "JavaScriptKit", package: "JavaScriptKit"),
+      ],
       swiftSettings: [.swiftLanguageMode(.v5)]
     ),
     .executableTarget(
@@ -31,6 +36,7 @@ let package = Package(
         "SessionLogic",
         "ProtocolModels",
         "RemoteProtocol",
+        "RemoteClient",
         "BrowserAPI",
         .product(name: "ElementaryUI", package: "elementary-ui"),
         .product(name: "ElementaryRouter", package: "elementary-router"),

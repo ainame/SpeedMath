@@ -1,13 +1,14 @@
 import ElementaryRouter
 import ElementaryUI
 import ProtocolModels
+import RemoteClient
 import RemoteProtocol
 import SessionLogic
 
 @View
 struct RemotePage {
   @Environment(AppRoutes._routeSetEnvironmentKey) var routes
-  @State var link: RemoteLink?
+  @State var link: AppRemoteLink?
   @State var model = RemoteModel()
   @State var code = ""
 
@@ -16,7 +17,7 @@ struct RemotePage {
     section(.class(paired ? "remote-page remote-live" : "remote-page remote-pairing")) {
       if paired { liveView } else { pairingView }
     }
-    .onAppear { link = RemoteLink(role: .remote, render: { model = $0 }, presenter: { _ in }) }
+    .onAppear { link = AppRemoteLink(role: .remote, render: { model = $0 }) }
     .onDisappear {
       link?.dispose()
       link = nil

@@ -1,10 +1,28 @@
 import BrowserAPI
 import ElementaryUI
+import ProtocolModels
+import RemoteClient
+import RemoteProtocol
 
 /// App-level shortcuts to the browser (through `BrowserAPI`).
 enum Browser {
   /// High-resolution timestamp in milliseconds (`performance.now()`).
   static func now() -> Double { BrowserPage.now }
+
+  /// A random 32-hex identifier (decks, epochs).
+  static func identifier() -> String { BrowserPage.randomHex(bytes: 16) }
+}
+
+/// The remote control's client, running in the browser.
+typealias AppRemoteLink = RemoteLink<BrowserRemoteEnvironment>
+
+extension RemoteLink where Environment == BrowserRemoteEnvironment {
+  convenience init(
+    role: RemoteRole, render: @escaping (RemoteModel) -> Void, presenter: @escaping (Command?) -> Void = { _ in }
+  ) {
+    self.init(
+      role: role, environment: .shared, inbox: BrowserRemoteEnvironment.inbox, render: render, presenter: presenter)
+  }
 }
 
 /// Random source backed by `crypto.getRandomValues`, avoiding a dependency on WASI randomness.

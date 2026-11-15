@@ -118,7 +118,7 @@ struct PlaySession {
     }
     .attach(BrowserListener.cardKeys { key in handle(key) })
     .onAppear {
-      deckID = RemoteLink.identifier()
+      deckID = Browser.identifier()
       hub.attachPlay(PlayHook(state: { hookState }, perform: { perform($0) }))
     }
     .onDisappear { hub.detachPlay() }
@@ -172,7 +172,7 @@ struct PlaySession {
     guard play.phase == .ready else { return .resync }
     var rng = BrowserRandom()
     cards = deck.draw(count: count, includeZero: includeZero, using: &rng)
-    deckID = RemoteLink.identifier()
+    deckID = Browser.identifier()
     play.start(count: cards.count, epoch: deckID, now: Browser.now())
     hub.changed()
     return .applied
@@ -181,7 +181,7 @@ struct PlaySession {
   @discardableResult
   private func replay() -> CommandResult {
     guard play.phase == .finished else { return .resync }
-    deckID = RemoteLink.identifier()
+    deckID = Browser.identifier()
     play.reset()
     cards = []
     hub.changed()

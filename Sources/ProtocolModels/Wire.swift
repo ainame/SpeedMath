@@ -17,19 +17,19 @@ public enum RelayKind: Int32 {
   case requestSync = 4
 }
 
-public enum PlayPhase: Int32 {
+public enum PlayPhase: Int32, Sendable {
   case ready = 0
   case playing = 1
   case finished = 2
 }
 
-public enum Direction: Int32 {
+public enum Direction: Int32, Sendable {
   case previous = -1
   case next = 1
 }
 
 /// Which screen the Presenter (child's device) shows. The Remote mirrors it.
-public enum Screen: Int32 {
+public enum Screen: Int32, Sendable {
   /// Choosing cards and options (also reported from the stamp and record pages).
   case home = 0
   /// Deck chosen, waiting for はじめる.
@@ -39,7 +39,7 @@ public enum Screen: Int32 {
 }
 
 /// What the Remote asks the Presenter to do. Settings actions carry their value; the others send 0.
-public enum RemoteAction: Int32 {
+public enum RemoteAction: Int32, Sendable {
   case next = 1
   case previous = 2
   /// Home → ready with the chosen settings (スタート！).
@@ -60,7 +60,7 @@ public enum RemoteAction: Int32 {
   case timer = 10
 }
 
-public struct Command: Equatable {
+public struct Command: Equatable, Sendable {
   public let id: String
   public let epoch: String
   public let baseVersion: Int
@@ -76,7 +76,7 @@ public struct Command: Equatable {
   }
 }
 
-public enum CommandResult: Int32 {
+public enum CommandResult: Int32, Sendable {
   case applied = 1
   case unchanged = 2
   case resync = 3

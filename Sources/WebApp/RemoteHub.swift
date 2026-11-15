@@ -1,4 +1,5 @@
 import ProtocolModels
+import RemoteClient
 import Reactivity
 import SessionLogic
 
@@ -27,8 +28,8 @@ final class RemoteHub {
   /// Pairing state for the views (panel, indicator, which controls the child gets).
   private(set) var model = RemoteModel()
 
-  @ReactiveIgnored private var link: RemoteLink?
-  @ReactiveIgnored private var ledger = CommandLedger(epoch: RemoteLink.identifier())
+  @ReactiveIgnored private var link: AppRemoteLink?
+  @ReactiveIgnored private var ledger = CommandLedger(epoch: Browser.identifier())
   @ReactiveIgnored private var screen: Screen = .home
   @ReactiveIgnored private var play: PlayHook?
   @ReactiveIgnored private var settings: PlaySettings?
@@ -42,7 +43,7 @@ final class RemoteHub {
   func start(settings: PlaySettings) {
     guard link == nil else { return }
     self.settings = settings
-    link = RemoteLink(
+    link = AppRemoteLink(
       role: .presenter,
       render: { [self] in model = $0 },
       presenter: { [self] in receive($0) })
@@ -91,9 +92,6 @@ final class RemoteHub {
 
   private func publish() {
     guard model.paired, let link, let settings else { return }
-    let wireSettings = WireSettings(
-      deck: Deck.allCases.firstIndex(of: settings.deck) ?? 0, includeZero: settings.includeZero,
-      count: settings.count == 45 ? 45 : 0, showTimer: settings.showTimer)
     let state = play?.state()
     let current = state?.screen ?? screen
     let onPlay = current == .playing || current == .finished
@@ -101,7 +99,7 @@ final class RemoteHub {
       let snapshot = Snapshot(
         epoch: ledger.epoch, deckVersion: state?.deckVersion ?? ledger.epoch, version: ledger.version,
         screen: current, index: onPlay ? state?.index ?? 0 : 0, elapsed: onPlay ? state?.elapsed ?? 0 : 0,
-        cards: onPlay ? state?.cards ?? [] : [], settings: wireSettings)
+        cards: onPlay ? state?.cards ?? [] : [], settings: wireSettings(settings))
     else { return }
     link.publish(snapshot)
   }
@@ -124,45 +122,34 @@ final class RemoteHub {
     }
   }
 
+  /// Carries out what `RemoteCommandPolicy` decided for this screen.
   private func perform(_ action: RemoteAction, value: Int) -> CommandResult {
+    guard let settings else { return .resync }
     let current = play?.state().screen ?? screen
-    switch action {
-    case .deck, .zero, .count, .timer:
-      guard current == .home, let settings else { return .resync }
-      return apply(action, value: value, to: settings)
-    case .start:
-      guard current == .home, let navigatePlay else { return .resync }
+    switch RemoteCommandPolicy.decide(action, value: value, screen: current, settings: wireSettings(settings)) {
+    case .answer(let result):
+      return result
+    case .changeSettings(let updated):
+      settings.deck = Deck.allCases[updated.deck]
+      settings.includeZero = updated.includeZero
+      settings.count = updated.count
+      settings.showTimer = updated.showTimer
+      return .applied
+    case .startPlay:
+      guard let navigatePlay else { return .resync }
       navigatePlay()
       return .applied
-    case .home:
-      guard current != .home else { return .unchanged }
+    case .goHome:
       navigateHome?()
       return .applied
-    case .begin, .next, .previous, .replay:
-      guard let play else { return .resync }
-      return play.perform(action)
+    case .play(let action):
+      return play?.perform(action) ?? .resync
     }
   }
 
-  private func apply(_ action: RemoteAction, value: Int, to settings: PlaySettings) -> CommandResult {
-    switch action {
-    case .deck:
-      guard value >= 0, value < Deck.allCases.count else { return .resync }
-      let deck = Deck.allCases[value]
-      if settings.deck == deck { return .unchanged }
-      settings.deck = deck
-    case .zero:
-      if settings.includeZero == (value == 1) { return .unchanged }
-      settings.includeZero = value == 1
-    case .count:
-      if settings.count == value { return .unchanged }
-      settings.count = value
-    case .timer:
-      if settings.showTimer == (value == 1) { return .unchanged }
-      settings.showTimer = value == 1
-    default:
-      return .resync
-    }
-    return .applied
+  private func wireSettings(_ settings: PlaySettings) -> WireSettings {
+    WireSettings(
+      deck: Deck.allCases.firstIndex(of: settings.deck) ?? 0, includeZero: settings.includeZero,
+      count: settings.count == 45 ? 45 : 0, showTimer: settings.showTimer)
   }
 }

@@ -72,7 +72,7 @@ public enum Wire {
 
 /// One card on the wire: `[lhs, sign, rhs]` with sign 1 for + and -1 for −. Answers are derived
 /// only by the Remote, so they are never sent.
-public struct WireCard: Equatable {
+public struct WireCard: Equatable, Sendable {
   public let lhs: Int
   public let sign: Int
   public let rhs: Int
@@ -88,7 +88,7 @@ public struct WireCard: Equatable {
 }
 
 /// The settings chosen on the home screen, as sent on the wire.
-public struct WireSettings: Equatable {
+public struct WireSettings: Equatable, Sendable {
   /// Index in `Deck.allCases`.
   public var deck: Int
   public var includeZero: Bool
@@ -105,7 +105,7 @@ public struct WireSettings: Equatable {
 }
 
 /// The Presenter's state as relayed to the Remote.
-public struct Snapshot: Equatable {
+public struct Snapshot: Equatable, Sendable {
   public let epoch: String
   public let deckVersion: String
   public let version: Int

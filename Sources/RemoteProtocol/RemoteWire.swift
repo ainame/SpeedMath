@@ -2,48 +2,9 @@ import BrowserAPI
 import JavaScriptKit
 import ProtocolModels
 
-/// A message the server (or the peer, through the server) sends to this client.
-public enum ServerMessage {
-  case connected(paired: Bool, peer: Bool)
-  /// The Remote's own credential after the Presenter approved it.
-  case approved(key: String)
-  /// Remote: waiting for approval; both screens show `check`.
-  case waiting(check: String)
-  /// Presenter: a join request to approve or reject.
-  case pending(request: String, check: String)
-  case pendingGone
-  case invite(generation: String, code: String, key: String)
-  case inviteMissing
-  case reset
-  case peerUp
-  case peerDown
-  case pong
-  case sync(Snapshot)
-  case ack(RemoteWire.Ack)
-  case command(Command)
-  case requestSync
-}
-
-/// A message this client sends.
-public enum ClientMessage {
-  case auth(role: Int, key: String)
-  case joinCode(generation: String, code: String)
-  case joinQR(generation: String, key: String)
-  case invite
-  case approve(request: String)
-  case reject(request: String)
-  case revoke
-  case end
-  case ping
-  case requestSync
-  case sync(Snapshot)
-  case ack(epoch: String, id: String, result: CommandResult)
-  case command(Command)
-}
-
-/// Decodes and encodes the remote control's JSON messages. JSON text is parsed by JS
-/// (`JSON.parse` through the bridge); every field is then checked here, so the rest of the app
-/// only sees validated Swift values.
+/// Decodes and encodes the remote control's JSON messages (`ServerMessage`, `ClientMessage`,
+/// `ControlRequest` / `ControlResponse` in `ProtocolModels`). JSON text is parsed by the browser;
+/// every field is then checked here, so the rest of the app only sees validated Swift values.
 public enum RemoteWire {
   // MARK: Messages
 
@@ -116,23 +77,24 @@ public enum RemoteWire {
 
   // MARK: HTTP control bodies
 
-  public static func createRequest() -> String { packet("create") }
-
-  public static func lookupRequest(code: String) -> String { packet("lookup") { $0["code"] = code.jsValue } }
-
-  /// `POST /api/session` → the new session and the Presenter's credential.
-  public static func createdSession(_ text: String) -> (id: String, key: String)? {
-    guard let x = JS.parse(text), let id = x.id.string, let key = x.key.string, Wire.isID(id), Wire.isKey(key)
-    else { return nil }
-    return (id, key)
+  public static func encode(_ request: ControlRequest) -> String {
+    switch request {
+    case .create: return packet("create")
+    case .lookup(let code): return packet("lookup") { $0["code"] = code.jsValue }
+    }
   }
 
-  /// `POST /api/lookup` → the session and invite generation for a typed code.
-  public static func foundSession(_ text: String) -> (id: String, generation: String)? {
-    guard let x = JS.parse(text), let id = x.id.string, let generation = x.generation.string, Wire.isID(id),
-      Wire.isID(generation)
-    else { return nil }
-    return (id, generation)
+  /// The response body for `request`, checked: a session id and a credential or generation.
+  public static func decode(_ text: String, for request: ControlRequest) -> ControlResponse? {
+    guard let x = JS.parse(text), let id = x.id.string, Wire.isID(id) else { return nil }
+    switch request {
+    case .create:
+      guard let key = x.key.string, Wire.isKey(key) else { return nil }
+      return .created(id: id, key: key)
+    case .lookup:
+      guard let generation = x.generation.string, Wire.isID(generation) else { return nil }
+      return .found(id: id, generation: generation)
+    }
   }
 
   // MARK: Fields
@@ -183,12 +145,6 @@ public enum RemoteWire {
       epoch: epoch, deckVersion: deckVersion, version: version, screen: screen, index: index,
       elapsed: elapsed, cards: cards,
       settings: WireSettings(deck: deck, includeZero: zero == 1, count: count, showTimer: timer == 1))
-  }
-
-  public struct Ack {
-    public let epoch: String
-    public let id: String
-    public let result: Int
   }
 
   static func ack(_ x: JSObject) -> Ack? {
