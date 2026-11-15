@@ -135,10 +135,11 @@ p, h1, h2 { margin: 0; }
 .progress-side { display: flex; }
 .progress-side a { position: relative; z-index: 2; }
 .progress-timer { justify-content: flex-end; }
-/* Each clock glyph has a fixed cell width so mm:ss.s never shifts as digits change. */
-.clock { display: inline-flex; justify-content: center; font-variant-numeric: tabular-nums; }
+/* Each clock digit has a fixed cell width so 「x ふん y びょう」 never shifts as digits change. */
+.clock { display: inline-flex; justify-content: center; align-items: baseline; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .clock-digit { display: inline-block; width: 0.66em; text-align: center; }
-.clock-separator { display: inline-block; width: 0.36em; text-align: center; }
+.clock-unit { font-size: 0.7em; margin: 0 0.3em 0 0.1em; }
+.clock-unit:last-child { margin-right: 0; }
 .progress .clock { padding: 0.15em 0.7em; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--line); font-size: 1.2rem; }
 
 .card-area { flex: 1; min-height: 0; position: relative; container-type: size; }

@@ -201,6 +201,18 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
   });
 }
 
+test("the play clock keeps ticking in whole minutes and seconds", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/#/play/add?count=3");
+  await page.getByRole("button", { name: "はじめる" }).click();
+  const clock = page.locator(".progress .clock");
+  await expect(clock).toHaveText("0ふん0びょう");
+  await page.clock.runFor(2_500);
+  await expect(clock).toHaveText("0ふん2びょう");
+  await page.clock.runFor(70_000);
+  await expect(clock).toHaveText("1ふん12びょう");
+});
+
 test("solo play tolerates blocked storage and clears records on the next day", async ({ browser }) => {
   const context = await browser.newContext();
   const page = await context.newPage();
