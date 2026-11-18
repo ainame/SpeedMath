@@ -8,6 +8,7 @@ import SessionLogic
 @View
 struct RemotePage {
   @Environment(AppRoutes._routeSetEnvironmentKey) var routes
+  @Environment(RemoteHub.self) var hub: RemoteHub
   @State var link: AppRemoteLink?
   @State var model = RemoteModel()
   @State var code = ""
@@ -17,7 +18,10 @@ struct RemotePage {
     section(.class(paired ? "remote-page remote-live" : "remote-page remote-pairing")) {
       if paired { liveView } else { pairingView }
     }
-    .onAppear { link = AppRemoteLink(role: .remote, render: { model = $0 }) }
+    .onAppear {
+      hub.closePanel()
+      link = AppRemoteLink(role: .remote, render: { model = $0 })
+    }
     .onDisappear {
       link?.dispose()
       link = nil
@@ -179,6 +183,7 @@ struct RemotePage {
       } else if model.joining {
         p(.class("remote-status"), .custom(name: "role", value: "status")) { model.status }
       } else {
+        h2 { "リモコンを つなぐ" }
         p(.class("remote-lead")) { "こどもの がめんに でている コードを いれてね。" }
         label(.class("remote-code-field")) {
           span(.class("remote-code-label")) { "コード" }

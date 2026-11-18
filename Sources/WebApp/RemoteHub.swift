@@ -58,6 +58,9 @@ final class RemoteHub {
   // MARK: Pairing panel (home screen only)
 
   func togglePanel() { link?.show() }
+  func closePanel() {
+    if model.open { link?.show() }
+  }
   func newInvite() { link?.newInvite() }
   func retry() { link?.retry() }
   func begin() { link?.begin() }

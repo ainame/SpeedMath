@@ -19,7 +19,10 @@ async function decodeQR(page) {
 async function codeJoin(page, remote) {
   const code = await page.locator(".pair-code").textContent();
   await remote.goto("/#/");
+  await expect(remote.getByRole("link", { name: "コードを いれる" })).toHaveCount(0);
+  await remote.getByRole("button", { name: "リモコン", exact: true }).click();
   await remote.getByRole("link", { name: "コードを いれる" }).click();
+  await expect(remote.locator(".pair-panel")).toHaveCount(0);
   await remote.getByRole("textbox", { name: "コード" }).fill(code.toLowerCase().replaceAll("-", " "));
   await remote.getByRole("button", { name: "コードで つなぐ" }).click();
 }
@@ -61,17 +64,19 @@ test("the pairing panel reserves space while loading its QR code", async ({ page
   const close = panel.getByRole("button", { name: "とじる" });
   const slot = panel.locator(".pair-qr-slot");
   const help = panel.locator(".pair-help");
+  const manual = panel.getByRole("link", { name: "コードを いれる" });
   try {
     await expect(slot.getByRole("status")).toHaveText("コードを よみこみちゅう");
     await expect(slot.locator(".pair-spinner")).toBeVisible();
-    const positions = await Promise.all([close, slot, help].map(item => item.boundingBox()));
+    await expect(manual).toBeVisible();
+    const positions = await Promise.all([close, slot, help, manual].map(item => item.boundingBox()));
     const panelBox = await panel.boundingBox();
     expect(positions[0].x).toBeGreaterThan(panelBox.x + panelBox.width / 2);
     expect(positions[0].y).toBeLessThan(positions[1].y);
     releaseRequest();
     await expect(slot.getByRole("img")).toBeVisible();
     await expect(slot.getByRole("status")).toHaveCount(0);
-    expect(await Promise.all([close, slot, help].map(item => item.boundingBox()))).toEqual(positions);
+    expect(await Promise.all([close, slot, help, manual].map(item => item.boundingBox()))).toEqual(positions);
   } finally {
     releaseRequest();
   }

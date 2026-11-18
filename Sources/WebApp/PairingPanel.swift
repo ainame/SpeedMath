@@ -10,6 +10,7 @@ import SessionLogic
 /// offers to end the pairing.
 @View
 struct RemotePanel {
+  @Environment(AppRoutes._routeSetEnvironmentKey) var routes
   let hub: RemoteHub
 
   var body: some View {
@@ -22,6 +23,15 @@ struct RemotePanel {
             .onClick { hub.togglePanel() }
         }
         div(.class("pair-content")) { content(model) }
+        if !model.paired, model.request == nil, let routes {
+          div(.class("pair-fallback")) {
+            div(.class("pair-fallback-copy")) {
+              p(.class("pair-fallback-title")) { "この スマホを リモコンにする" }
+              p { "QRが よめないときは、こどもの がめんの コードで つなげるよ。" }
+            }
+            AppRoutes.Link(to: routes.remote()) { "コードを いれる" }
+          }
+        }
       }
     }
   }
@@ -56,9 +66,7 @@ struct RemotePanel {
             }
           }
           div(.class("pair-help")) {
-            p {
-              "おうちの ひとに QR コードを よんでもらってね。よめないときは、スマホで「コードを いれる」を おしてね。"
-            }
+            p { "おうちの ひとに QR コードを よんでもらってね。" }
             p(.class(model.code == nil ? "pair-code pair-reserved" : "pair-code")) { model.code ?? "XXXX-XXXX-XXXX" }
             p { "コードは 2ふんで きれるよ。" }
             button(.type(.button), .class(model.code == nil ? "chip pair-reserved" : "chip")) { "あたらしい コード" }

@@ -22,7 +22,6 @@ struct AppShell<Content: View> {
             } else {
               button(.type(.button), .class("chip remote-toggle")) { "リモコン" }
                 .onClick { hub.togglePanel() }
-              AppRoutes.Link(to: routes.remote()) { "コードを いれる" }
             }
           }
           AppRoutes.Link(to: routes.home()) {
