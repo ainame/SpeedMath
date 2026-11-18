@@ -18,7 +18,8 @@ async function decodeQR(page) {
 
 async function codeJoin(page, remote) {
   const code = await page.locator(".pair-code").textContent();
-  await remote.goto("/#/remote");
+  await remote.goto("/#/");
+  await remote.getByRole("link", { name: "コードを いれる" }).click();
   await remote.getByRole("textbox", { name: "コード" }).fill(code.toLowerCase().replaceAll("-", " "));
   await remote.getByRole("button", { name: "コードで つなぐ" }).click();
 }
