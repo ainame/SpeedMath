@@ -25,6 +25,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
   private var attempts = 0
   private var lookup: Environment.Request?
   private var wantInvite = false
+  private var qrGeneration: String?
   private var snapshot: Snapshot?
   private var oldEpochs: [String] = []
   private var inFlightCommand: Command?
@@ -160,7 +161,13 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
 
   /// Presenter: open or close the pairing panel, starting a session when needed.
   public func show() {
-    update { $0.open.toggle() }
+    update {
+      $0.open.toggle()
+      if !$0.open {
+        $0.code = nil
+        $0.qr = nil
+      }
+    }
     guard model.open else { return }
     if session == nil {
       begin()
@@ -236,7 +243,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
           session.code.map { .joinCode(generation: generation, code: $0) }
           ?? .joinQR(generation: generation, key: session.key ?? "")
       } else {
-        first = .auth(role: role.rawValue, key: session.key ?? "")
+        first = .auth(role: role.rawValue, key: session.key ?? "", autoQR: role == .presenter)
       }
       socket.send(first)
     }
@@ -328,7 +335,12 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
         $0.check = check
         $0.status = "しょうにんを まっています"
       }
-    case .pending(let request, let check):
+    case .pending(let request, let check, let generation):
+      if let generation {
+        let visibleQR = model.open && model.qr != nil && qrGeneration == generation && !environment.isHidden
+        send(visibleQR ? .approve(request: request) : .reject(request: request))
+        return
+      }
       update {
         $0.request = request
         $0.check = check
@@ -429,10 +441,11 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
 
   private func showInvite(generation: String, code: String, key: String) {
     guard let session else { return }
-    let qr = environment.inviteQRCode(session.id + "." + generation + "." + key)
+    let qr = model.open ? environment.inviteQRCode(session.id + "." + generation + "." + key) : nil
+    qrGeneration = qr == nil ? nil : generation
     update {
       $0.joining = false
-      $0.code = Wire.formatCode(code)
+      $0.code = $0.open ? Wire.formatCode(code) : nil
       $0.qr = qr
       $0.status = ""
     }

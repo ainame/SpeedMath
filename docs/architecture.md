@@ -120,17 +120,26 @@ sequenceDiagram
   S->>C: reserve(hash(code), id, generation)
   S-->>P: { code, QR key, generation }
   Note over P: shows QR (#/remote?invite=id.generation.key)<br/>and the typed code XXXX-XXXX-XXXX
-  R->>S: WSS joinQR / joinCode (after POST /api/lookup for a code)
-  S-->>P: pending { check }
-  S-->>R: waiting { check }
-  Note over P,R: both screens show the same check text
-  P->>S: approve
+  alt QR scanned
+    R->>S: WSS joinQR
+    S-->>P: pending { qrGeneration }
+    P->>S: approve automatically if this QR is still on screen
+  else Code typed (or older Presenter)
+    R->>S: WSS joinCode / joinQR
+    S-->>P: pending { check }
+    S-->>R: waiting { check }
+    Note over P,R: both screens show the same check text
+    P->>S: approve after confirmation
+  end
   S-->>R: approved { remote key }
   S-->>P: peerUp
 ```
 
 - An invite generation lasts 2 minutes; the QR and the typed code belong to the same generation
   and are consumed together on approval. Five wrong attempts end the generation.
+- Closing the panel stops automatic approval immediately. Reopening it generates a new invite.
+  The Worker marks a pending request with its QR generation only after validating the QR secret
+  and only if the Presenter advertised support in its authentication message.
 - Credentials are random, bound to session and role, and stored only as SHA-256 hashes. Invite
   values travel in request bodies or the first WebSocket message, never in URLs the server sees.
 - Every invalid or unknown request gets the same 404 (`{ error: "unavailable" }`).

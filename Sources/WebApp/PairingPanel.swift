@@ -56,7 +56,7 @@ struct RemotePanel {
             }
           }
           div(.class("pair-help")) {
-            p { "スマホで QR コードを よむか、リモコンに このコードを いれてね。" }
+            p { "おうちの ひとに QR コードを よんでもらってね。コードを いれても つなげるよ。" }
             p(.class(model.code == nil ? "pair-code pair-reserved" : "pair-code")) { model.code ?? "XXXX-XXXX-XXXX" }
             p { "コードは 2ふんで きれるよ。" }
             button(.type(.button), .class(model.code == nil ? "chip pair-reserved" : "chip")) { "あたらしい コード" }

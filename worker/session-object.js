@@ -115,10 +115,15 @@ export class SessionObject extends DurableObject {
     principal.socket = a.id;
     principal.until = state.expires;
     this.save(state);
-    ws.serializeAttachment({ id: a.id, role });
+    const autoQR = role === 1 && message.autoQR === true;
+    ws.serializeAttachment({ id: a.id, role, autoQR });
     this.close(old, "replaced");
     this.send(ws, "connected", { paired: !!state.remote, peer: !!this.peer(state, role === 1 ? 2 : 1) });
-    if (role === 1 && state.pending) this.send(ws, "pending", state.pending.display);
+    if (role === 1 && state.pending) {
+      const display = state.pending.display;
+      if (display.qrGeneration && !autoQR) this.send(this.pending(state), "waiting", display);
+      this.send(ws, "pending", display);
+    }
     if (role === 1 && state.invite && !state.pending) this.send(ws, "inviteMissing");
     if (role === 2 || wasDisconnected || old) {
       this.send(this.peer(state, role === 1 ? 2 : 1), "peerUp");
@@ -176,13 +181,16 @@ export class SessionObject extends DurableObject {
       this.save(state);
       return this.close(ws);
     }
-    if (state.remote || this.pending(state) || !this.peer(state, 1)) return this.close(ws);
+    const presenter = this.peer(state, 1);
+    if (state.remote || this.pending(state) || !presenter) return this.close(ws);
     const display = { request: random(16), check: random(3).toUpperCase() };
+    // Only the Worker sets this marker, after checking the QR secret and the Presenter capability.
+    if (!code && presenter.deserializeAttachment()?.autoQR) display.qrGeneration = generation;
     state.pending = { socket: a.id, display };
     this.save(state);
     ws.serializeAttachment({ ...a, pending: true });
-    this.send(ws, "waiting", display);
-    this.send(this.peer(state, 1), "pending", display);
+    if (!display.qrGeneration) this.send(ws, "waiting", display);
+    this.send(presenter, "pending", display);
     await this.schedule(state);
   }
 

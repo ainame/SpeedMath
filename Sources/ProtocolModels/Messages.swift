@@ -21,8 +21,8 @@ public enum ServerMessage: Equatable, Sendable {
   case approved(key: String)
   /// Remote: waiting for approval; both screens show `check`.
   case waiting(check: String)
-  /// Presenter: a join request to approve or reject.
-  case pending(request: String, check: String)
+  /// Presenter: a join request. A QR generation allows approval while that QR is on screen.
+  case pending(request: String, check: String, qrGeneration: String? = nil)
   case pendingGone
   case invite(generation: String, code: String, key: String)
   case inviteMissing
@@ -38,7 +38,7 @@ public enum ServerMessage: Equatable, Sendable {
 
 /// A message this client sends.
 public enum ClientMessage: Equatable, Sendable {
-  case auth(role: Int, key: String)
+  case auth(role: Int, key: String, autoQR: Bool = false)
   case joinCode(generation: String, code: String)
   case joinQR(generation: String, key: String)
   case invite

@@ -15,11 +15,12 @@ import Testing
   link.show()
   environment.respond(.success(.created(id: sessionID, key: presenterKey)))
   #expect(!link.model.open, "creating the session does not reopen the closed panel")
+  link.show()
   #expect(environment.stored == sessionID + "." + presenterKey, "kept for a reload")
   #expect(environment.socket.sessionID == sessionID)
 
   environment.socket.open()
-  #expect(environment.socket.sent == [.auth(role: 1, key: presenterKey)])
+  #expect(environment.socket.sent == [.auth(role: 1, key: presenterKey, autoQR: true)])
   environment.socket.receive(.connected(paired: false, peer: false))
   #expect(environment.socket.sent.last == .invite, "an invite follows the first connection")
   #expect(link.model.joining)
@@ -36,7 +37,7 @@ import Testing
   #expect(inbox.restoredPresenter == nil, "used once")
   #expect(environment.requests.isEmpty, "no new session")
   environment.socket.open()
-  #expect(environment.socket.sent == [.auth(role: 1, key: presenterKey)])
+  #expect(environment.socket.sent == [.auth(role: 1, key: presenterKey, autoQR: true)])
   environment.socket.receive(.connected(paired: true, peer: false))
   #expect(link.model.paired)
 }
@@ -59,6 +60,24 @@ import Testing
   environment.socket.receive(.peerUp)
   #expect(link.model.paired && !link.model.open)
   #expect(stateRequests == 1, "the hub publishes the current state")
+}
+
+@Test(arguments: [true, false])
+func qrPairingRequiresTheDisplayedInvite(panelOpen: Bool) {
+  let environment = FakeEnvironment()
+  let inbox = InviteInbox(restoredPresenter: RemoteSession(id: sessionID, key: presenterKey))
+  let link = RemoteLink(
+    role: .presenter, environment: environment, inbox: inbox, render: { _ in }, presenter: { _ in })
+  environment.socket.open()
+  environment.socket.receive(.connected(paired: false, peer: false))
+  link.show()
+  environment.socket.receive(.invite(generation: generation, code: "ABCDEFGHJKMN", key: remoteKey))
+  if !panelOpen { link.show() }
+  environment.socket.receive(.pending(request: "scan", check: "ABC123", qrGeneration: generation))
+  let expected: ClientMessage = panelOpen ? .approve(request: "scan") : .reject(request: "scan")
+  #expect(environment.socket.sent.last == expected)
+  #expect(link.model.request == nil)
+  #expect(link.model.open == panelOpen)
 }
 
 @Test func presenterDisposeEndsTheSession() {

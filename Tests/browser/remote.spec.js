@@ -28,6 +28,10 @@ async function approve(page, remote) {
   await expect(remote.getByRole("button", { name: "スタート！" })).toHaveCount(0);
   await expect(page.locator(".pair-code")).toHaveText(await remote.locator(".pair-code").textContent());
   await page.getByRole("button", { name: "つなぐ", exact: true }).click();
+  await expectPaired(page, remote);
+}
+
+async function expectPaired(page, remote) {
   // The panel closes by itself; the child's home shows the indicator and locks the choices.
   await expect(page.locator(".pair-panel")).toHaveCount(0);
   await expect(page.locator(".header-remote")).toHaveText("リモコン ✓");
@@ -154,7 +158,7 @@ test("decode the displayed QR, strip invite, reload the Presenter mid-game, and 
   try {
     await presenter(page);
     await remote.goto(await decodeQR(page));
-    await approve(page, remote);
+    await expectPaired(page, remote);
     await expect(remote).toHaveURL(/#\/remote$/);
     await shortGame(page, remote);
     await remote.getByRole("button", { name: "はじめる" }).click();
@@ -185,7 +189,7 @@ test("a QR scanned into an already open Remote tab joins without reloading", asy
     await remote.getByRole("textbox", { name: "コード" }).fill("ABCD");
     await remote.evaluate(() => { window.sameDocument = true; });
     await remote.evaluate(hash => { location.hash = hash; }, link.hash);
-    await approve(page, remote);
+    await expectPaired(page, remote);
     expect(await remote.evaluate(() => window.sameDocument)).toBe(true);
     await expect(remote).toHaveURL(/#\/remote$/);
 
@@ -197,8 +201,28 @@ test("a QR scanned into an already open Remote tab joins without reloading", asy
     await remote.evaluate(() => { location.hash = "#/"; });
     await expect(remote.getByText("1. カードを えらぼう")).toBeVisible();
     await remote.evaluate(hash => { location.hash = hash; }, link2.hash);
-    await approve(page, remote);
+    await expectPaired(page, remote);
     expect(await remote.evaluate(() => window.sameDocument)).toBe(true);
+  } finally { await context.close(); }
+});
+
+test("closing the QR panel prevents pairing with the old scan", async ({ page, browser }) => {
+  const context = await browser.newContext();
+  try {
+    const remote = await context.newPage();
+    await presenter(page);
+    const stale = await decodeQR(page);
+    await page.getByRole("button", { name: "とじる" }).click();
+    await remote.goto(stale);
+    await expect(remote.locator(".remote-status")).toContainText("つなげませんでした");
+    await expect(page.locator(".pair-panel")).toHaveCount(0);
+    await expect(page.locator(".header-remote")).toHaveText("リモコン");
+
+    await page.getByRole("button", { name: "リモコン" }).click();
+    const fresh = await decodeQR(page);
+    expect(fresh).not.toBe(stale);
+    await remote.goto(fresh);
+    await expectPaired(page, remote);
   } finally { await context.close(); }
 });
 

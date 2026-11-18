@@ -10,6 +10,7 @@ try {
   const presenter = await browser.newPage(), remote = await browser.newPage();
   await presenter.goto(base + "/#/");
   await presenter.locator(".header-remote").getByRole("button", { name: "リモコン" }).click();
+  await presenter.locator(".pair-code").waitFor();
   const code = await presenter.locator(".pair-code").textContent();
   await remote.goto(base + "/#/remote");
   await remote.getByRole("textbox", { name: "コード" }).fill(code);

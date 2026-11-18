@@ -177,7 +177,7 @@ struct RemotePage {
         p(.class("pair-code remote-check")) { check }
         p(.class("remote-status")) { model.status }
       } else if model.joining {
-        p(.class("remote-status")) { model.status }
+        p(.class("remote-status"), .custom(name: "role", value: "status")) { model.status }
       } else {
         p(.class("remote-lead")) { "こどもの がめんに でている コードを いれてね。" }
         label(.class("remote-code-field")) {

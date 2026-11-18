@@ -20,7 +20,9 @@ public enum RemoteWire {
       return .waiting(check: check)
     case "pending":
       guard let request = x.request.string, let check = x.check.string else { return nil }
-      return .pending(request: request, check: check)
+      let qrGeneration = x.qrGeneration.string
+      if let qrGeneration, !Wire.isID(qrGeneration) { return nil }
+      return .pending(request: request, check: check, qrGeneration: qrGeneration)
     case "pendingGone": return .pendingGone
     case "invite":
       guard let generation = x.generation.string, Wire.isID(generation), let key = x.key.string, Wire.isKey(key),
@@ -42,10 +44,11 @@ public enum RemoteWire {
 
   public static func encode(_ message: ClientMessage) -> String {
     switch message {
-    case .auth(let role, let key):
+    case .auth(let role, let key, let autoQR):
       return packet("auth") {
         $0["role"] = role.jsValue
         $0["key"] = key.jsValue
+        if autoQR { $0["autoQR"] = true.jsValue }
       }
     case .joinCode(let generation, let code):
       return packet("joinCode") {
