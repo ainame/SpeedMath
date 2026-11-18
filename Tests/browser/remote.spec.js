@@ -77,6 +77,8 @@ test("the parent chooses, starts, plays and picks what comes next; one record an
 
     await shortGame(page, remote);
     await remote.getByRole("button", { name: "はじめる" }).click();
+    await expect(page.locator(".countdown-number")).toHaveText("3");
+    await expect(remote.locator(".remote-answer")).toHaveCount(0);
     await expect(page.locator(".progress-count")).toHaveText("1 / 3");
     await expect(page.getByRole("link", { name: "✕ やめる" })).toHaveCount(0);
     await expect(remote.locator(".remote-count")).toHaveText("1 / 3");
@@ -181,6 +183,11 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
     // Pairing lives on the home screen only.
     await expect(page.getByRole("button", { name: "リモコン" })).toBeHidden();
     await page.keyboard.press("ArrowRight");
+    const number = page.locator(".countdown-number");
+    await expect(number).toHaveText("3");
+    await expect(number).toBeInViewport({ ratio: 1 });
+    await expect(number).toHaveCSS("animation-name", "countdown-pop");
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
     await expect(page.locator(".progress-count")).toHaveText("1 / 3");
     await expect(page.locator(".progress .clock")).toHaveCount(0);
     await page.locator(".tap-next").click();
@@ -201,16 +208,47 @@ for (const [width, height] of [[812, 375], [667, 320], [375, 812], [1280, 800]])
   });
 }
 
-test("the play clock keeps ticking in whole minutes and seconds", async ({ page }) => {
+test("the countdown blocks card input and the play clock starts at zero", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.install();
   await page.goto("/#/play/add?count=3");
   await page.getByRole("button", { name: "はじめる" }).click();
+  const number = page.locator(".countdown-number");
   const clock = page.locator(".progress .clock");
+  await expect(number).toHaveText("3");
+  await expect(number).toHaveCSS("animation-name", "none");
+  await expect(clock).toHaveCount(0);
+  await expect(page.locator(".tap-next")).toHaveCount(0);
+  await page.clock.runFor(1_000);
+  await expect(number).toHaveText("2");
+  await page.keyboard.press("Space");
+  await page.clock.runFor(1_000);
+  await expect(number).toHaveText("1");
+  await page.clock.runFor(1_000);
+  await expect(page.locator(".progress-count")).toHaveText("1 / 3");
   await expect(clock).toHaveText("0ふん0びょう");
   await page.clock.runFor(2_500);
   await expect(clock).toHaveText("0ふん2びょう");
   await page.clock.runFor(70_000);
   await expect(clock).toHaveText("1ふん12びょう");
+  await page.keyboard.press("Space");
+  await expect(page.locator(".progress-count")).toHaveText("2 / 3");
+});
+
+test("quitting the countdown leaves the next game ready", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/#/play/add?count=3");
+  const start = page.getByRole("button", { name: "はじめる" });
+  await start.click();
+  await expect(page.locator(".countdown-number")).toHaveText("3");
+  await page.keyboard.press("Escape");
+  const choose = page.getByRole("link", { name: "スタート！" });
+  await expect(choose).toBeVisible();
+  await choose.click();
+  await page.clock.runFor(3_000);
+  await expect(start).toBeVisible();
+  await start.click();
+  await expect(page.locator(".countdown-number")).toHaveText("3");
 });
 
 test("solo play tolerates blocked storage and clears records on the next day", async ({ browser }) => {
@@ -220,6 +258,8 @@ test("solo play tolerates blocked storage and clears records on the next day", a
     await page.clock.install({ time: new Date(2026, 10, 14, 23, 59, 50) });
     await page.goto("/#/play/add?count=1");
     await page.getByRole("button", { name: "はじめる" }).click();
+    await page.clock.runFor(3_000);
+    await expect(page.locator(".progress-count")).toHaveText("1 / 1");
     await page.keyboard.press("ArrowRight");
     await page.getByText("おわり！", { exact: true }).waitFor();
     await page.goto("/#/records");
@@ -230,11 +270,14 @@ test("solo play tolerates blocked storage and clears records on the next day", a
     await page.goto("/#/records");
     await expect(page.locator(".record-row")).toHaveCount(0);
     const blocked = await context.newPage();
+    await blocked.clock.install();
     await blocked.addInitScript(() => {
       Object.defineProperty(window, "localStorage", { get() { throw new DOMException("blocked", "SecurityError"); } });
     });
     await blocked.goto("/#/play/add?count=1");
     await blocked.getByRole("button", { name: "はじめる" }).click();
+    await blocked.clock.runFor(3_000);
+    await expect(blocked.locator(".progress-count")).toHaveText("1 / 1");
     await blocked.keyboard.press("ArrowRight");
     await expect(blocked.getByText("おわり！", { exact: true })).toBeVisible();
   } finally { await context.close(); }

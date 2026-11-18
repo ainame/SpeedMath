@@ -153,6 +153,24 @@ p, h1, h2 { margin: 0; }
   user-select: none; -webkit-user-select: none;
   font-size: min(45cqh, 14cqw); font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+.countdown {
+  color: var(--text); background: var(--deck-soft);
+  font-size: min(55cqh, 30cqw);
+}
+.countdown-number {
+  display: grid; place-items: center;
+  width: 1.38em; height: 1.38em; line-height: 1;
+  border-radius: 50%; border: 0.035em solid var(--deck); background: var(--surface);
+  animation: countdown-pop 340ms ease-out both;
+}
+@keyframes countdown-pop {
+  0% { transform: scale(0.78); opacity: 0.45; }
+  62% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown-number { animation: none; }
+}
 /* Invisible halves of the whole screen: left = previous, right = next. */
 .tap-zone { position: fixed; top: 0; bottom: 0; width: 50%; z-index: 1; cursor: pointer; }
 .tap-previous { left: 0; }

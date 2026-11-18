@@ -40,6 +40,8 @@ struct PlaySession {
   @State var isNewStamp: Bool = false
   @State var stampTilt: Int = -8
   @State var keys = BrowserListener()
+  @State var countdown = 0
+  @State var countdownTicks = BrowserListener()
   @Environment(StampBook.self) var stampBook: StampBook
   @Environment(TodayRecords.self) var records: TodayRecords
   @Environment(RemoteHub.self) var hub: RemoteHub
@@ -48,18 +50,22 @@ struct PlaySession {
     section(.class("play")) {
       switch play.phase {
       case .ready:
-        div(.class("ready")) {
-          p(.class("ready-deck")) { "\(deck.title)（\(deck.subtitle)）" }
-          p(.class("ready-count")) { "\(drawCount)まい" }
-          if hub.isPaired {
-            p(.class("remote-wait")) { "リモコンで はじめてね" }
-          } else {
-            button(.type(.button), .class("big-button")) { "はじめる" }
-              .onClick { start() }
-            p(.class("hint hint-keys")) { "スペース か → で はじまるよ" }
+        if countdown > 0 {
+          countdownView
+        } else {
+          div(.class("ready")) {
+            p(.class("ready-deck")) { "\(deck.title)（\(deck.subtitle)）" }
+            p(.class("ready-count")) { "\(drawCount)まい" }
+            if hub.isPaired {
+              p(.class("remote-wait")) { "リモコンで はじめてね" }
+            } else {
+              button(.type(.button), .class("big-button")) { "はじめる" }
+                .onClick { start() }
+              p(.class("hint hint-keys")) { "スペース か → で はじまるよ" }
+            }
           }
+          backLink
         }
-        backLink
 
       case .playing:
         div(.class("progress")) {
@@ -124,7 +130,26 @@ struct PlaySession {
     }
     .onDisappear {
       keys.detach()
+      countdownTicks.detach()
       hub.detachPlay()
+    }
+  }
+
+  private var countdownView: some View {
+    Group {
+      div(.class("progress")) {
+        div(.class("progress-side")) {
+          if let routes, !hub.isPaired {
+            AppRoutes.Link(to: routes.home()) { "✕ やめる" }
+          }
+        }
+      }
+      div(.class("card-area")) {
+        div(.class("card countdown \(deck.colorClass)"), .custom(name: "role", value: "status")) {
+          span(.class("countdown-number")) { "\(countdown)" }
+            .id(countdown)
+        }
+      }
     }
   }
 
@@ -174,12 +199,24 @@ struct PlaySession {
   @discardableResult
   private func start() -> CommandResult {
     guard play.phase == .ready else { return .resync }
+    guard countdown == 0 else { return .unchanged }
+    countdown = 3
+    countdownTicks.repeatEvery(milliseconds: 1_000) {
+      countdown -= 1
+      if countdown == 0 {
+        countdownTicks.detach()
+        startCards()
+      }
+    }
+    return .applied
+  }
+
+  private func startCards() {
     var rng = BrowserRandom()
     cards = deck.draw(count: count, includeZero: includeZero, using: &rng)
     deckID = Browser.identifier()
     play.start(count: cards.count, epoch: deckID, now: Browser.now())
     hub.changed()
-    return .applied
   }
 
   @discardableResult
