@@ -42,6 +42,36 @@ async function shortGame(page, remote) {
   await expect(remote.getByRole("button", { name: "はじめる" })).toBeEnabled();
 }
 
+test("the pairing panel reserves space while loading its QR code", async ({ page }) => {
+  await page.setViewportSize({ width: 667, height: 320 });
+  let releaseRequest;
+  const requestGate = new Promise(resolve => { releaseRequest = resolve; });
+  await page.route("**/api/session", async route => {
+    await requestGate;
+    await route.continue();
+  });
+  await page.goto("/#/");
+  await page.locator(".header-remote").getByRole("button", { name: "リモコン" }).click();
+  const panel = page.locator(".pair-panel");
+  const close = panel.getByRole("button", { name: "とじる" });
+  const slot = panel.locator(".pair-qr-slot");
+  const help = panel.locator(".pair-help");
+  try {
+    await expect(slot.getByRole("status")).toHaveText("コードを よみこみちゅう");
+    await expect(slot.locator(".pair-spinner")).toBeVisible();
+    const positions = await Promise.all([close, slot, help].map(item => item.boundingBox()));
+    const panelBox = await panel.boundingBox();
+    expect(positions[0].x).toBeGreaterThan(panelBox.x + panelBox.width / 2);
+    expect(positions[0].y).toBeLessThan(positions[1].y);
+    releaseRequest();
+    await expect(slot.getByRole("img")).toBeVisible();
+    await expect(slot.getByRole("status")).toHaveCount(0);
+    expect(await Promise.all([close, slot, help].map(item => item.boundingBox()))).toEqual(positions);
+  } finally {
+    releaseRequest();
+  }
+});
+
 test("the parent chooses, starts, plays and picks what comes next; one record and stamp", async ({ page, browser }) => {
   const remoteContext = await browser.newContext();
   const remote = await remoteContext.newPage();

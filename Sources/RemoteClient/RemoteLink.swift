@@ -64,6 +64,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
       storePresenter(session)
       update {
         $0.started = true
+        $0.joining = environment.isOnline
         $0.status = connectingText
       }
       connect()
@@ -152,7 +153,6 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
       wantInvite = true
       update {
         $0.started = true
-        $0.open = true
       }
     }
     connect()
@@ -165,6 +165,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
     if session == nil {
       begin()
     } else if !authenticated {
+      wantInvite = true
       retry()
     } else if model.code == nil && !model.paired && model.request == nil {
       newInvite()
@@ -175,6 +176,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
     if model.paired { return }
     if send(.invite) {
       update {
+        $0.joining = true
         $0.code = nil
         $0.qr = nil
         $0.request = nil
@@ -272,6 +274,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
     }
     update {
       $0.retry = true
+      if role == .presenter { $0.joining = false }
       $0.status = disconnectedText
     }
     if environment.isOnline && attempts < 6 {
@@ -340,6 +343,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
       showInvite(generation: generation, code: code, key: key)
     case .inviteMissing:
       update {
+        $0.joining = false
         $0.request = nil
         $0.check = nil
         $0.code = nil
@@ -350,6 +354,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
       snapshot = nil
       inFlightCommand = nil
       update {
+        $0.joining = false
         $0.online = false
         $0.paired = false
         $0.busy = false
@@ -366,6 +371,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
       if role == .presenter {
         // Paired: close the panel and go back to the screen it was opened from.
         update {
+          $0.joining = false
           $0.paired = true
           $0.open = false
           $0.request = nil
@@ -425,6 +431,7 @@ public final class RemoteLink<Environment: RemoteEnvironment> {
     guard let session else { return }
     let qr = environment.inviteQRCode(session.id + "." + generation + "." + key)
     update {
+      $0.joining = false
       $0.code = Wire.formatCode(code)
       $0.qr = qr
       $0.status = ""

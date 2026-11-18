@@ -6,6 +6,7 @@ public struct RemoteModel: Equatable {
   public var online = false
   public var open = false
   public var started = false
+  /// Creating an invite on the Presenter or joining one on the Remote.
   public var joining = false
   public var retry = false
   public var paired = false

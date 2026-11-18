@@ -10,9 +10,11 @@ import Testing
   let link = RemoteLink(
     role: .presenter, environment: environment, inbox: InviteInbox(), render: { _ in }, presenter: { _ in })
   link.show()
-  #expect(link.model.open)
+  #expect(link.model.open && link.model.joining)
   #expect(environment.requests.map(\.request) == [.create])
+  link.show()
   environment.respond(.success(.created(id: sessionID, key: presenterKey)))
+  #expect(!link.model.open, "creating the session does not reopen the closed panel")
   #expect(environment.stored == sessionID + "." + presenterKey, "kept for a reload")
   #expect(environment.socket.sessionID == sessionID)
 
@@ -20,7 +22,9 @@ import Testing
   #expect(environment.socket.sent == [.auth(role: 1, key: presenterKey)])
   environment.socket.receive(.connected(paired: false, peer: false))
   #expect(environment.socket.sent.last == .invite, "an invite follows the first connection")
+  #expect(link.model.joining)
   environment.socket.receive(.invite(generation: generation, code: "ABCDEFGHJKMN", key: remoteKey))
+  #expect(!link.model.joining)
   #expect(link.model.code == "ABCD-EFGH-JKMN")
   #expect(link.model.qr == "qr:" + sessionID + "." + generation + "." + remoteKey)
 }

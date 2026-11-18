@@ -280,14 +280,35 @@ p, h1, h2 { margin: 0; }
     max(var(--pad-y), var(--safe-bottom)) max(var(--pad-x), var(--safe-left));
   padding: 0.8em; border: 2.5px solid var(--line-strong); border-radius: 1.2em;
   background: var(--surface); display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 0.6em; text-align: center; container-type: size;
+  gap: 0.6em; text-align: center; container-type: size;
 }
-.pair-heading, .pair-invite, .pair-help, .remote-actions {
+.pair-heading {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%;
+}
+.pair-heading h2 { grid-column: 2; }
+.pair-close { grid-column: 3; justify-self: end; }
+.pair-content, .pair-invite, .pair-help, .remote-actions {
   display: flex; gap: 0.65em; align-items: center; justify-content: center;
 }
+.pair-content { flex: 1; min-height: 0; flex-direction: column; width: 100%; }
 .pair-invite { min-height: 0; }
 .pair-help { flex-direction: column; max-width: 23em; }
-.pair-qr { width: min(48cqh, 36cqw, 240px); image-rendering: pixelated; }
+.pair-reserved { visibility: hidden; }
+.pair-qr-slot {
+  width: min(48cqh, 36cqw, 240px); aspect-ratio: 1; flex: none;
+  display: grid; place-items: center;
+}
+.pair-qr { display: block; width: 100%; image-rendering: pixelated; }
+.pair-loading { display: grid; justify-items: center; gap: 0.65em; color: var(--text-muted); }
+.pair-spinner {
+  width: 1.6em; height: 1.6em; border: 0.18em solid var(--line);
+  border-top-color: var(--accent-pressed); border-radius: 50%;
+  animation: pair-spin 800ms linear infinite;
+}
+@keyframes pair-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .pair-spinner { animation: none; }
+}
 .pair-code { font: bold 1.35rem ui-monospace, monospace; letter-spacing: 0.08em; white-space: nowrap; }
 .remote-actions .chip { min-width: 6em; min-height: 2.7em; }
 /* ---------- Remote: pairing form, then a full-screen controller ---------- */
@@ -415,7 +436,7 @@ p, h1, h2 { margin: 0; }
 }
 @media (orientation: portrait) {
   .pair-invite { flex-direction: column; }
-  .pair-qr { width: min(56cqw, 36cqh, 240px); }
+  .pair-qr-slot { width: min(56cqw, 36cqh, 240px); }
   .progress .clock { padding-inline: 0.85em; font-size: 0.95rem; }
 }
 
