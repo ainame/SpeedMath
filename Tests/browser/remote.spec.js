@@ -74,6 +74,8 @@ test("the parent chooses, starts, plays and picks what comes next; one record an
     await expect(page.getByRole("button", { name: "はじめる" })).toHaveCount(0);
     await remote.getByRole("button", { name: "えらびなおす" }).click();
     await expect(page.getByText("1. カードを えらぼう")).toBeVisible();
+    // Wait for the Remote to leave the old ready screen before opening a new game.
+    await expect(remote.getByRole("button", { name: "スタート！" })).toBeEnabled();
 
     await shortGame(page, remote);
     await remote.getByRole("button", { name: "はじめる" }).click();
