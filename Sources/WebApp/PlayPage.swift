@@ -144,11 +144,9 @@ struct PlaySession {
           }
         }
       }
-      div(.class("card-area")) {
-        div(.class("card countdown \(deck.colorClass)"), .custom(name: "role", value: "status")) {
-          span(.class("countdown-number")) { "\(countdown)" }
-            .id(countdown)
-        }
+      div(.class("card-area countdown \(deck.colorClass)"), .custom(name: "role", value: "status")) {
+        span(.class("countdown-number")) { "\(countdown)" }
+          .id(countdown)
       }
     }
   }

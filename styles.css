@@ -153,12 +153,10 @@ p, h1, h2 { margin: 0; }
   user-select: none; -webkit-user-select: none;
   font-size: min(45cqh, 14cqw); font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.countdown {
-  color: var(--text); background: var(--deck-soft);
-  font-size: min(55cqh, 30cqw);
-}
+.countdown { display: grid; place-items: center; }
 .countdown-number {
   display: grid; place-items: center;
+  font-size: min(55cqh, 30cqw); font-weight: bold; font-variant-numeric: tabular-nums;
   width: 1.38em; height: 1.38em; line-height: 1;
   border-radius: 50%; border: 0.035em solid var(--deck); background: var(--surface);
   animation: countdown-pop 340ms ease-out both;
